@@ -278,6 +278,11 @@ function topdown(B,a,wall){fill(B,hex('#e8e4da'));const cx=16,cy=29,inCone=(x,y)
    for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)if(Math.abs(i)+Math.abs(j)<2)B.set(x+i,y+j,on?BALL[2]:hex('#c0bcb0'))});
   for(let k=0;k<3;k++)for(let i=-k;i<=k;i++)B.set(cx+i,cy-2+k,hex('#2a2a34'))}
 
+// 5편 추가 도우미: 배율을 키운 숫자, 배율을 키운 나무
+function textK(B,str,x,y,c,q=N/32){let cx=x;for(const ch of str){const g=FONT[ch];for(let i=0;i<15;i++)if(g[i]==='1')box(B,cx+(i%3)*q,y+Math.floor(i/3)*q,cx+(i%3+1)*q-1,y+(Math.floor(i/3)+1)*q-1,c);cx+=4*q}}
+function treeK(B,cx,by,sc){const k=N/32,rx=5*sc*k,ry=6*sc*k,cy=by-12*sc*k;box(B,cx-sc*k*.8,by-7*sc*k,cx+sc*k*.8,by,hex('#5a3820'));
+  for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;if(dx*dx+dy*dy<=1)B.set(x,y,quant(GR,litT([dx,dy,Math.sqrt(Math.max(0,1-dx*dx-dy*dy))])))}}
+
 const TERMS=[
 {cat:'opt',tag:'3D 전용',res:96,ko:'LOD, 디테일 단계',en:'Level of Detail',lb:'모두 고품질',la:'거리별 LOD',b:'멀리 있어도 같은 모델',a:'멀수록 단순한 모델',
  d:'멀리 있는 물체를 더 단순한 모델이나 작은 텍스처로 바꿔 그리는 기법입니다. 멀리서는 어차피 차이가 보이지 않으니 그만큼 계산을 아낍니다.',
@@ -285,11 +290,11 @@ const TERMS=[
  draw(B,a){const k=N/32;fill(B,hex('#d8dce4'));box(B,0,24*k,N-1,N-1,GND);
   [[9,14,8,24],[22,16,5,10],[28.5,19,2.6,6]].forEach(([cx,cy,r,n])=>{cx*=k;cy*=k;r*=k;const m=a?n:128,seg=2*Math.PI/m;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-cx,dy=y+.5-cy,d=Math.hypot(dx,dy),an=((Math.atan2(dy,dx)+Math.PI/m)%(2*Math.PI)+2*Math.PI)%(2*Math.PI),
    lim=r*Math.cos(Math.PI/m)/Math.cos((an%seg)-Math.PI/m);if(d>lim)continue;const fa=Math.floor(an/seg)*seg,rr=Math.min(1,d/r),nn=a?norm([Math.cos(fa)*rr,Math.sin(fa)*rr,Math.sqrt(Math.max(.05,1-rr*rr))]):[dx/r,dy/r,Math.sqrt(Math.max(0,1-(d/r)**2))];B.set(x,y,sh3(nn,hex('#5a8ac0'),.35,40))}})}},
-{cat:'opt',ko:'팝인',en:'Pop-in',lb:'팝인',la:'디더 페이드',b:'집이 갑자기 툭 나타남',a:'점점 채워지며 나타남',anim:true,
+{cat:'opt',ko:'팝인',en:'Pop-in',lb:'팝인',la:'페이드 인',b:'집이 갑자기 툭 나타남',a:'투명도를 올리며 서서히 나타남',anim:true,
  d:'물체가 그려지기 시작하는 거리에 들어오거나 LOD가 바뀌는 순간, 눈앞에서 갑자기 나타나거나 모양이 툭 바뀌는 현상입니다.',
- t:'디더 패턴으로 서서히 채우거나 반투명으로 섞어서 바뀌는 순간을 숨깁니다.',
- draw(B,a,f,s=0){putLayered(B);const ph=(s/3)%1,vis=a?cl((ph-.35)/.3):(ph>.5?1:0);
-  for(let y=13;y<=20;y++)for(let x=5;x<=11;x++){if(!(vis>=1||(BAYER[y%4][x%4]+.5)/16<vis))continue;B.set(x,y,y<=14?hex('#7a2a2a'):(x===8&&y===17)?hex('#ffd070'):hex('#c8a070'))}}},
+ t:'나타날 때 투명도를 0에서 1로 서서히 올리면 바뀌는 순간이 숨겨집니다. LOD가 바뀔 때도 이전 모델과 새 모델을 잠깐 겹쳐 섞습니다. 반투명 처리가 어려운 엔진에서는 디더 패턴으로 대신 채우기도 합니다.',
+ draw(B,a,f,s=0){putLayered(B);const ph=(s/3)%1,vis=a?cl((ph-.35)/.3):(ph>.5?1:0);if(!vis)return;
+  for(let y=13;y<=20;y++)for(let x=5;x<=11;x++)B.set(x,y,mix(B.get(x,y),y<=14?hex('#7a2a2a'):(x===8&&y===17)?hex('#ffd070'):hex('#c8a070'),vis))}},
 {cat:'opt',ko:'프러스텀 컬링',en:'Frustum Culling',lb:'전부 그림',la:'프러스텀 컬링',b:'안 보이는 것까지 계산',a:'시야 밖은 건너뜀',
  d:'카메라 시야(프러스텀) 밖에 있는 물체는 아예 그리지 않는 최적화입니다. 위에서 내려다본 그림이고, 밝은 부채꼴이 카메라 시야입니다.',
  t:'회색 점이 이번 프레임에 그리지 않은 물체입니다. 2D 게임에서도 화면 밖 스프라이트와 타일을 건너뛰는 것이 같은 원리입니다.',
@@ -297,27 +302,32 @@ const TERMS=[
 {cat:'opt',ko:'오클루전 컬링',en:'Occlusion Culling',lb:'시야 안은 전부',la:'오클루전 컬링',b:'벽 뒤에 가린 것도 그림',a:'벽에 가린 것은 건너뜀',
  d:'시야 안에 있더라도 다른 물체(벽, 건물)에 완전히 가려진 물체는 그리지 않는 최적화입니다. 실내나 도시처럼 가림이 많은 곳에서 효과가 큽니다.',
  draw(B,a){topdown(B,a,true)}},
-{cat:'opt',ko:'오버드로우',en:'Overdraw',lb:'파티클 많음',la:'줄인 뒤',b:'같은 픽셀을 여러 번 덮어 그림',a:'겹침이 줄어듦',
+{cat:'opt',ko:'오버드로우',en:'Overdraw',lb:'파티클 많음',la:'줄인 뒤',b:'연기 파티클 30개가 겹겹이 덮임',a:'파티클 8개, 작게',anim:true,
  d:'같은 픽셀을 한 프레임에 여러 번 덮어 그리는 것입니다. 반투명 연기나 불꽃 파티클이 크고 많이 겹치면 화면 크기 대비 계산이 급격히 늘어 느려집니다.',
- t:'파랑에서 빨강으로 갈수록 그 픽셀을 여러 번 그렸다는 뜻입니다. 파티클 개수와 크기를 줄이거나 불투명 부분을 잘라 내서 줄입니다.',
- draw(B,a){tavern(B);grade(B,c=>mul(desat(c,.8),.5));const n=a?6:22,cnt=new Array(N*N).fill(0);for(let i=0;i<n;i++){const x0=10+hash(i,1)*12,y0=8+hash(i,2)*12,r=a?2.5:4+hash(i,3)*3;
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-x0,y+.5-y0)<=r)cnt[y*N+x]++}for(let i=0;i<N*N;i++)if(cnt[i])B.set(i%N,Math.floor(i/N),hsv(Math.max(0,220-cnt[i]*28),.85,.95))}},
-{cat:'opt',ko:'인스턴싱',en:'GPU Instancing',lb:'하나씩 요청',la:'인스턴싱',b:'풀 40포기에 요청 40번',a:'요청 한 번으로 40포기',
+ t:'파랑에서 빨강으로 갈수록 그 픽셀을 여러 번 그렸다는 뜻입니다. 파티클 개수와 크기를 줄이거나, 파티클 그림의 투명한 가장자리를 잘라 내서 줄입니다.',
+ draw(B,a,f,s=0){tavern(B);grade(B,c=>mul(desat(c,.8),.45));const n=a?8:30,cnt=new Array(N*N).fill(0);
+  for(let i=0;i<n;i++){const p=wrap(s*.3+hash(i,4)),x0=11+hash(i,1)*10+Math.sin(s*1.3+i)*2*p,y0=27-p*24,r=(a?1.8:3+hash(i,3)*2.5)*(.6+p*.9);
+   for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-x0,y+.5-y0)<=r)cnt[y*N+x]++}
+  for(let i=0;i<N*N;i++)if(cnt[i])B.set(i%N,Math.floor(i/N),hsv(Math.max(0,220-cnt[i]*26),.85,.95))}},
+{cat:'opt',ko:'인스턴싱',en:'GPU Instancing',lb:'하나씩 요청',la:'인스턴싱',b:'풀 40포기를 한 포기씩 40번 요청',a:'요청 한 번에 40포기를 모두 그림',anim:true,
  d:'같은 모델이나 스프라이트를 위치만 바꿔 수백, 수천 개 그릴 때 한 번의 요청으로 모두 그리는 방법입니다. 풀, 나무, 군중, 총알처럼 같은 것이 많을 때 씁니다.',
- t:'왼쪽 위 숫자가 그리기 요청 수입니다. 3편의 배칭과 목적은 같고, 방법이 다릅니다.',
- draw(B,a){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<14?mix(hex('#7ab4e0'),hex('#d0e8f4'),y/13):mix(hex('#5a9a3a'),hex('#3a7a2a'),(y-14)/17));
-  for(let i=0;i<40;i++){const x=Math.floor(hash(i,5)*30)+1,y=15+Math.floor(hash(i,6)*16);B.set(x,y,GR[3]);B.set(x-1,y+1,GR[2]);B.set(x+1,y+1,GR[2])}
-  box(B,1,1,a?6:10,7,hex('#1c1a24'));text(B,a?'1':'40',2,2,hex('#ffe08a'))}},
+ t:'왼쪽 위 숫자가 지금까지 보낸 그리기 요청 수입니다. 왼쪽은 노란 풀이 지금 그리는 한 포기입니다. 3편의 배칭과 목적은 같고, 방법이 다릅니다.',
+ draw(B,a,f,s=0){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<14?mix(hex('#7ab4e0'),hex('#d0e8f4'),y/13):mix(hex('#5a9a3a'),hex('#3a7a2a'),(y-14)/17));
+  const cur=a?39:Math.floor(s*14)%40;for(let i=0;i<=cur;i++){const x=Math.floor(hash(i,5)*30)+1,y=15+Math.floor(hash(i,6)*16),o=Math.round(Math.sin(s*2.2+x*.4)),hl=!a&&i===cur?hex('#ffe060'):null;
+   B.set(x+o,y,hl||GR[3]);B.set(x-1,y+1,hl||GR[2]);B.set(x+1,y+1,hl||GR[2]);B.set(x,y+1,hl||GR[2])}
+  const t=String(a?1:cur+1);box(B,1,1,2+t.length*4,7,hex('#1c1a24'));text(B,t,2,2,hex('#ffe08a'))}},
 {cat:'opt',tag:'3D 전용',res:96,ko:'빌보드, 임포스터',en:'Billboard / Impostor',lb:'고정된 평면',la:'빌보드',b:'옆에서 보면 종잇장처럼 얇아짐',a:'항상 카메라를 바라봄',anim:true,
  d:'멀리 있는 나무 같은 3D 물체를 평면 그림 한 장으로 대신하고, 그 평면이 항상 카메라 쪽을 향하게 돌리는 기법입니다. 여러 각도에서 미리 찍은 그림을 바꿔 쓰면 임포스터라고 합니다.',
  t:'카메라가 나무 주위를 도는 장면입니다. 평면을 고정해 두면 옆에서 볼 때 얇아지거나 사라집니다.',
  draw(B,a,f,s=0){stage(B);const k=N/32,w=a?1:Math.max(.05,Math.abs(Math.cos(s*1.1))),cx=16*k,by=29*k;
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){const rx=5*k*w+.5,dx=(x+.5-cx)/rx,dy=(y+.5-(by-12*k))/(6*k);if(dx*dx+dy*dy<=1){const n=[dx,dy,Math.sqrt(Math.max(0,1-dx*dx-dy*dy))],t=vnoise(x/(1.5*k*w+.5),y/(1.5*k))*.25;B.set(x,y,sh3(n,hex('#4a9a3a').map(v=>v*(.85+t)),.15,20))}
    else if(Math.abs(x+.5-cx)<=w*k+.5&&y>=by-7*k&&y<by)B.set(x,y,hex('#5a3820'))}}},
-{cat:'opt',ko:'텍스처 스트리밍',en:'Texture Streaming',lb:'다 읽고 표시',la:'스트리밍',b:'다 불러올 때까지 빈 화면',a:'흐린 것부터 점점 선명하게',anim:true,
+{cat:'opt',ko:'텍스처 스트리밍',en:'Texture Streaming',lb:'다 읽고 표시',la:'스트리밍',b:'다 불러올 때까지 빈 화면',a:'흐린 것부터 여러 단계로 선명해짐',anim:true,
  d:'큰 텍스처를 한 번에 다 불러오지 않고, 작은 해상도부터 먼저 보여 준 뒤 필요할 때 큰 해상도로 바꿔 끼우는 방식입니다. 메모리를 아끼고 화면이 비어 있는 시간을 줄입니다.',
- draw(B,a,f,s=0){tavern(B);blob(B,16,27,4,5);const ph=(s/3)%1;if(!a){if(ph<.55)fill(B,hex('#8a8a90'));return}const k=ph<.25?8:ph<.45?4:ph<.6?2:1;if(k>1)blockify(B,k)}},
-
+ t:'오른쪽은 텍스처를 8단계로 나눠 불러옵니다. 아래 막대가 불러온 양입니다.',
+ draw(B,a,f,s=0){tavern(B);blob(B,16,27,4,5);const ph=(s/4.5)%1,ld=cl(ph/.72);
+  if(!a){if(ld<1)fill(B,hex('#8a8a90'))}else{const st=[16,12,8,6,4,3,2,1],q=st[Math.min(7,Math.floor(ld*7.999))];if(q>1)blockify(B,q)}
+  box(B,1,30,30,31,hex('#1c1a24'));if(ld>0)box(B,1,30,1+Math.round(ld*29),31,hex('#40c060'))}},
 {cat:'light',ko:'라이트맵 베이크',en:'Lightmap Baking',lb:'실시간 조명',la:'베이크',b:'단단한 그림자, 반사광 없음',a:'부드러운 그림자와 반사광',
  d:'시간이 오래 걸리는 조명 계산(부드러운 그림자, 반사광)을 미리 해서 텍스처에 구워 두는 것입니다. 실행 중에는 그 텍스처를 읽기만 하니 가볍고 품질도 높습니다. 대신 움직이는 조명에는 쓸 수 없습니다.',
  t:'2D 픽셀아트에서 그림에 그림자와 반사광을 직접 칠해 두는 것도 결국 손으로 굽는 베이크입니다.',
@@ -371,11 +381,15 @@ const TERMS=[
  draw(B,a){const T=Buf();tavern(T);blob(T,16,27,4,5);const lo=(i,j)=>{i=Math.min(15,Math.max(0,i));j=Math.min(15,Math.max(0,j));const c=[T.get(2*i,2*j),T.get(2*i+1,2*j),T.get(2*i,2*j+1),T.get(2*i+1,2*j+1)];return c.reduce((s,q)=>s.map((v,z)=>v+q[z]/4),[0,0,0])};
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!a){B.set(x,y,lo(x>>1,y>>1));continue}const u=(x+.5)/2-.5,v=(y+.5)/2-.5,i=Math.floor(u),j=Math.floor(v),fx=u-i,fy=v-j;B.set(x,y,mix(mix(lo(i,j),lo(i+1,j),fx),mix(lo(i,j+1),lo(i+1,j+1),fx),fy))}
   if(a){const S=copyOf(B);for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=S.get(x,y),bl=[at(S,x-1,y),at(S,x+1,y),at(S,x,y-1),at(S,x,y+1)].reduce((s,q)=>s.map((v,z)=>v+q[z]/4),[0,0,0]);B.set(x,y,c.map((v,z)=>cl(v+(v-bl[z])*.7)))}}}},
-{cat:'aa',ko:'동적 해상도',en:'Dynamic Resolution',lb:'고정 해상도',la:'동적 해상도',b:'무거운 순간 프레임이 뚝뚝 끊김',a:'무거운 순간 해상도를 낮춰 부드럽게',anim:true,
- d:'게임이 무거워지는 순간 렌더링 해상도를 잠깐 낮춰서 프레임을 지키는 기능입니다. 화면이 잠깐 흐려지는 대신 움직임이 끊기지 않습니다.',
- t:'오른쪽 위 막대가 빨간 동안이 무거운 구간입니다.',
- draw(B,a,f,s=0){const ph=(s/3)%1,heavy=ph>.4&&ph<.75,t=!a&&heavy?Math.floor(s*5)/5:s;tavern(B);blob(B,Math.round(4+(t*8)%24),27,4,5);if(a&&heavy)blockify(B,2);box(B,27,1,30,2,heavy?hex('#e04040'):hex('#40c060'))}},
-
+{cat:'aa',res:96,ko:'동적 해상도',en:'Dynamic Resolution',lb:'고정 해상도',la:'동적 해상도',b:'파티클이 터지는 순간 프레임이 뚝 떨어짐',a:'그 순간만 해상도를 낮춰 60프레임 유지',anim:true,
+ d:'게임이 무거워지는 순간 렌더링 해상도를 잠깐 낮춰서 프레임을 지키는 기능입니다. 화면이 잠깐 거칠어지는 대신 움직임이 끊기지 않습니다.',
+ t:'마법이 터지며 파티클 수백 개를 한꺼번에 그리는 순간을 가정한 장면입니다. 왼쪽 위 숫자는 초당 프레임, 오른쪽 위 숫자는 렌더링 해상도(%)입니다.',
+ draw(B,a,f,s=0){const k=N/32,ph=(s/4)%1,heavy=ph>.32&&ph<.72,t=!a&&heavy?Math.floor(s*10)/10:s,u=(t/4)%1;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const X=(x+.5)/k,Y=(y+.5)/k,g=Math.exp(-((X-20)**2+(Y-12)**2)/90);B.set(x,y,Y<22?mix(hex('#2a2038'),hex('#6a4a68'),g+Y/60):mix(hex('#4a3a34'),hex('#2a201c'),(Y-22)/10))}
+  ellipsoid(B,9*k,22*k,4*k,5*k,n=>sh3(n,hex('#6ea3bf'),.4,40));
+  if(u>.3&&u<.85){const age=(u-.3)/.55,cnt=Math.round(420*Math.sin(Math.min(1,age*1.4)*Math.PI*.5+.0001)*(1-age*.3));
+   for(let i=0;i<cnt;i++){const an=hash(i,1)*Math.PI*2,sp=.35+hash(i,2)*.65,px=(20+Math.cos(an)*sp*age*14)*k,py=(17+Math.sin(an)*sp*age*11+age*age*8)*k,c=mix(hex('#fff0a0'),hex('#ff4a20'),cl(age*1.3+hash(i,3)*.3));box(B,px,py,px+k*.7,py+k*.7,c)}}
+  if(a&&heavy)blockify(B,2);box(B,1,1,1+9*k,1+6*k,hex('#1c1a24'));textK(B,!a&&heavy?'10':'60',2,2,!a&&heavy?hex('#ff6060'):hex('#60e080'),k);
+  const r=a&&heavy?'50':'100';box(B,N-2-r.length*4*k,1,N-2,1+6*k,hex('#1c1a24'));textK(B,r,N-1-r.length*4*k,2,a&&heavy?hex('#ffc060'):hex('#c0c0d0'),k)}},
 {cat:'time',ko:'프레임 타임',en:'Frame Time',lb:'들쭉날쭉',la:'고른 프레임',b:'평균은 좋지만 가끔 튐',a:'매 프레임 16.7ms 안쪽',
  d:'한 프레임을 그리는 데 걸린 시간을 밀리초(ms)로 나타낸 값입니다. 60FPS를 지키려면 매 프레임 16.7ms 안에 끝나야 합니다. 평균 FPS가 높아도 가끔 튀는 프레임이 있으면 화면이 걸려 보여서, 실무에서는 FPS보다 프레임 타임을 봅니다.',
  t:'막대 하나가 프레임 하나입니다. 아래 점선이 16.7ms(60FPS), 위 점선이 33.3ms(30FPS)입니다.',
@@ -462,11 +476,15 @@ const TERMS=[
    if(X>=cx-hw&&X<cx&&Y>=ty+(X-(cx-hw))/2&&Y<=ty+(X-(cx-hw))/2+dp)B.set(x,y,hex('#3f6a93'));
    if(X>=cx&&X<=cx+hw&&Y>=ty+hh-(X-cx)/2&&Y<=ty+hh-(X-cx)/2+dp)B.set(x,y,hex('#2c3f66'));
    if(Math.abs(X-cx)/hw+Math.abs(Y-ty)/hh<=1)B.set(x,y,hex('#7aa6c2'))}}},
-{cat:'twod',ko:'2.5D',en:'2.5D',lb:'2D',la:'2.5D',b:'모든 것이 한 평면',a:'바닥에 깊이가 있고 멀수록 작아짐',
+{cat:'twod',res:96,ko:'2.5D',en:'2.5D',lb:'2D',la:'2.5D',b:'모든 것이 한 평면',a:'바닥에 깊이가 있고 멀수록 작아짐',
  d:'2D 그림과 3D 공간을 섞어서 깊이감을 내는 방식을 통틀어 부르는 말입니다. 스프라이트를 3D 바닥 위에 세우거나, 2D 화면에 원근과 깊이 정렬을 더하는 식입니다.',
- draw(B,a){fill(B,mix(hex('#8ab8d8'),hex('#d8e8ee'),.5));if(!a){for(let y=24;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,GND);treeAt(B,8,24);blob(B,18,24,3,4);treeAt(B,26,24);return}
-  for(let y=12;y<N;y++)for(let x=0;x<N;x++){const d=(y-11)/20,u=(x-16)/d;B.set(x,y,Math.abs(u%8)<.9||Math.abs(((y-11)**.6)%1.3)<.18?hex('#a8a090'):GND)}
-  treeAt(B,24,16,.45);blob(B,10,21,2,2.6);treeAt(B,22,31,1)}},
+ t:'오른쪽은 같은 나무와 캐릭터 그림을 깊이에 따라 크기만 바꿔 3D 바닥 위에 세웠습니다.',
+ draw(B,a){const k=N/32;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(hex('#8ab8d8'),hex('#d8e8ee'),y/(N*.4)));
+  const chr=(cx,by,sc)=>{ellipsoid(B,cx,by-4*sc*k,3*sc*k,4*sc*k,n=>quant(BALL,litT(n)));box(B,cx+.6*sc*k,by-5*sc*k,cx+1.2*sc*k,by-4.4*sc*k,INK)};
+  if(!a){box(B,0,24*k,N-1,N-1,GND);treeK(B,7*k,24*k,1);chr(16*k,24*k,1);treeK(B,25*k,24*k,1);return}
+  const hz=11*k;for(let y=0;y<hz;y++)for(let x=0;x<N;x++){const top=hz-(2.5+Math.sin(x/(4*k))*1.6+Math.sin(x/(1.7*k))*.6)*k;if(y>=top)B.set(x,y,hex('#7a8ca8'))}
+  for(let y=Math.ceil(hz);y<N;y++){const d=(y-hz)/(N-hz),z=1/Math.max(.02,d);for(let x=0;x<N;x++){const u=(x-N/2)/(d*N),line=Math.abs(u*2-Math.round(u*2))<.035/d*d*1.2+.012||Math.abs(z*.5-Math.round(z*.5))<.02*z;B.set(x,y,line?mix(GND,hex('#8a8070'),.6):mix(hex('#b8b0a0'),GND,d))}}
+  const at_=(u,d)=>[N/2+u*d*N,hz+d*(N-hz)];[[-.45,.22,'t'],[.4,.3,'t'],[.05,.5,'c'],[-.25,.78,'t'],[.32,.95,'t']].forEach(([u,d,w])=>{const[x,y]=at_(u,d),sc=d*1.25;w==='t'?treeK(B,x,y,sc):chr(x,y,sc*1.1)})}},
 {cat:'twod',ko:'HD-2D',en:'HD-2D',lb:'픽셀아트만',la:'HD-2D',b:'평평한 픽셀 장면',a:'3D 조명, 피사계 심도, 블룸을 더함',
  d:'픽셀아트 캐릭터와 소품을 3D 공간에 세우고, 사실적인 조명, 피사계 심도, 블룸 같은 후처리를 더하는 표현 방식입니다. 스퀘어에닉스가 옥토패스 트래블러에서 이 이름을 썼습니다.',
  t:'캐릭터 픽셀은 그대로 두고 배경과 빛만 고급스럽게 만드는 것이 핵심 재료입니다.',
