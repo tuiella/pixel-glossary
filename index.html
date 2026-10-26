@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>픽셀 셰이딩 용어집</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=DotGothic16&display=swap">
+<style>
+/* Layout: 좁은 헤더, 분류 칩, 카드마다 32x32 픽셀 장면 두 장을 나란히 */
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --fg:#1d2030; --muted:#5d6275; --line:#d5d9e2; --accent:#b8701f;
+  --display:"Do Hyeon","IBM Plex Sans KR",sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --pixel:"DotGothic16","IBM Plex Sans KR",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#13151b;--surface:#1c1f28;--fg:#e7e9f0;--muted:#9aa0b3;--line:#2d313d;--accent:#f0b45a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#13151b;--surface:#1c1f28;--fg:#e7e9f0;--muted:#9aa0b3;--line:#2d313d;--accent:#f0b45a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.65}
+.wrap{max-width:1120px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header h1{font-family:var(--display);font-weight:400;font-size:clamp(32px,6vw,52px);line-height:1.1;margin:0 0 8px;text-wrap:balance}
+header p{color:var(--muted);margin:0;max-width:62ch}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 8px}
+nav a{font-size:13px;color:var(--fg);text-decoration:none;border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--surface)}
+nav a:hover,nav a:focus-visible{border-color:var(--accent);outline:none}
+h2{font-family:var(--display);font-weight:400;font-size:28px;margin:48px 0 16px;display:flex;align-items:baseline;gap:12px}
+h2 small{font-family:var(--pixel);font-size:13px;color:var(--muted);letter-spacing:.06em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h3{margin:0;font-size:18px;font-weight:600;line-height:1.3}
+.card h3 .en{display:block;font-family:var(--pixel);font-weight:400;font-size:12px;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+figure{margin:0;display:flex;flex-direction:column;gap:4px}
+canvas{width:100%;aspect-ratio:1;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:3px;display:block;max-width:100%}
+figcaption{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:baseline}
+figcaption b{font-family:var(--pixel);font-weight:400;font-size:11px;letter-spacing:.08em;color:var(--fg)}
+figure.after figcaption b{color:var(--accent)}
+.badge{font-size:11px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 8px;margin-left:8px;vertical-align:2px}
+.card p{margin:0;font-size:14px}
+.tip{font-size:13px;color:var(--muted)}
+.tip strong{color:var(--fg);font-weight:500}
+footer{margin-top:56px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <h1>픽셀 셰이딩 용어집</h1>
+  <p>렌더링과 픽셀아트에서 자주 나오는 용어를 32×32 픽셀 장면으로 비교합니다. 왼쪽이 효과를 넣기 전, 오른쪽이 넣은 뒤입니다. 실수를 다루는 항목은 왼쪽이 실수, 오른쪽이 고친 모습입니다.</p>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<footer>모든 그림은 페이지 안에서 코드로 그린 32×32 장면을 확대한 것입니다. 광원은 왼쪽 위에 있습니다.</footer>
+</div>
+
+<script>
+const N=32;
+const hex=(()=>{const m={};return h=>m[h]||(m[h]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255))})();
+const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const mul=(a,k)=>a.map(v=>v*k);
+const cl=v=>Math.max(0,Math.min(1,v));
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const norm=a=>{const l=Math.hypot(...a);return a.map(v=>v/l)};
+const quant=(r,t)=>r[Math.min(r.length-1,Math.max(0,Math.floor(t*r.length)))];
+const smooth=(r,t)=>{const s=cl(t)*(r.length-1),i=Math.min(r.length-2,Math.floor(s));return mix(r[i],r[i+1],s-i)};
+const L=norm([-.55,-.65,.52]);
+const litT=n=>cl((dot(n,L)+.3)/1.15);
+
+function Buf(){const d=new Float32Array(N*N*3);return{d,
+  set(x,y,c){if(x<0||y<0||x>=N||y>=N)return;const i=(y*N+x)*3;d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2]},
+  get(x,y){const i=(y*N+x)*3;return[d[i],d[i+1],d[i+2]]}}}
+function fill(B,c){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,c)}
+function floorWall(B,w,f,hy){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<hy?w:f)}
+function sphere(B,cx,cy,r,fn){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx)/r,dy=(y+.5-cy)/r,q=dx*dx+dy*dy;if(q<=1){const n=[dx,dy,Math.sqrt(1-q)];const c=fn(n,x,y,q);if(c)B.set(x,y,c)}}}
+function inSphere(x,y,cx,cy,r){const dx=(x+.5-cx)/r,dy=(y+.5-cy)/r;return dx*dx+dy*dy<=1}
+function darken(B,x,y,k){if(x<0||y<0||x>=N||y>=N)return;B.set(x,y,mul(B.get(x,y),k))}
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+
+const BALL=['#1b1f3a','#2c3f66','#3f6a93','#6ea3bf','#c4e6e6'].map(hex);
+const WALL=hex('#3b3550'),FLOOR=hex('#6b5442'),DARK=hex('#141019'),PAPER=hex('#e6e1d6'),INK=hex('#2b2540');
+
+function bricks(B,dark,shade){
+  const br=dark?hex('#4a2c30'):hex('#9a4f3c'),mo=dark?hex('#1e1418'):hex('#3c2a2a');
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const row=Math.floor(y/5),ly=y%5,ox=(row%2)*4,lx=(x+ox)%8;
+    let c=(ly===4||lx===7)?mo:br;
+    if(shade&&c===br){if(ly===0)c=hex('#c87055');else if(lx===0)c=hex('#b8604a');else if(ly===3)c=hex('#6e3328');else if(lx===6)c=hex('#7a392d')}
+    B.set(x,y,c)}}
+const hash=(x,y)=>{let n=Math.imul(x,374761393)+Math.imul(y,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296};
+const lum=c=>.299*c[0]+.587*c[1]+.114*c[2];
+function tavern(B){bricks(B,true,false);for(let y=20;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,(x+y)%6===0?hex('#4e3b30'):FLOOR);
+  for(let y=6;y<=13;y++)for(let x=12;x<=19;x++)B.set(x,y,(x===15||x===16||y===9)?hex('#3a2a2a'):hex('#e8c07a'));
+  for(let x=8;x<=23;x++){B.set(x,21,hex('#a87444'));B.set(x,22,hex('#6e4528'))}for(let y=23;y<=27;y++){B.set(9,y,hex('#5a3820'));B.set(22,y,hex('#5a3820'))}}
+function ellipsoid(B,cx,cy,rx,ry,fn){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,q=dx*dx+dy*dy;if(q<=1){const c=fn([dx,dy,Math.sqrt(1-q)],x,y);if(c)B.set(x,y,c)}}}
+function line(B,x0,y0,x1,y1,c){let dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,e=dx+dy;for(;;){B.set(x0,y0,c);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+function stairs(B,x,y,lens,c){for(const l of lens){for(let k=0;k<l;k++){B.set(x,y,c);x++}y++}}
+const litWith=(n,l)=>cl((dot(n,l)+.3)/1.15);
+const wrap=v=>((v%1)+1)%1;
+function ground(B,y){for(let yy=y;yy<N;yy++)for(let x=0;x<N;x++)B.set(x,yy,hex('#cfc8b8'))}
+function blob(B,cx,floor,rx,ry,lift=0,eyes=true){const cy=floor-ry-lift;ellipsoid(B,cx,cy,rx,ry,n=>quant(BALL,litT(n)));
+  if(eyes){B.set(Math.round(cx-2),Math.round(cy-1),INK);B.set(Math.round(cx+1),Math.round(cy-1),INK)}return cy}
+function crate(B,x0,y0,x1,y1,s){const w=Math.floor((x1-x0+1)/s),h=Math.floor((y1-y0+1)/s);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const lx=Math.floor((x-x0)/s),ly=Math.floor((y-y0)/s);if(lx>=w||ly>=h)continue;
+   let c=hex('#b07a46');if(lx===0||ly===0||lx===w-1||ly===h-1)c=hex('#4a2e1c');else if(ly===Math.floor(h/2)||Math.abs(lx-ly*(w/h))<.6)c=hex('#7a5030');B.set(x,y,c)}}
+// 카메라 항목용 가로 96px 주점. 0~47은 저녁 방, 48~95는 밤 방
+function wpix(x,y){if(x<0||x>=96||y<0||y>=N)return hex('#0a0a0e');const r=x%32,night=x>=48;
+  if(y>=22){if(r>=14&&r<=27&&y<=23)return hex(y===22?'#a87444':'#6e4528');if((r===15||r===26)&&y<=27)return hex('#5a3820');return(x+y)%6===0?hex('#4e3b30'):FLOOR}
+  if(r>=4&&r<=11&&y>=5&&y<=12)return(r===4||r===11||y===5||y===12||y===8)?hex('#3a2a2a'):hex(night?'#7ab4e0':'#e8c07a');
+  if(r>=21&&r<=23&&y>=8&&y<=11)return hex(r===22&&y>8&&y<11?'#fff6d8':'#ffc85a');
+  const row=Math.floor(y/5),ly=y%5,lx=(x+(row%2)*4)%8;let c=(ly===4||lx===7)?hex(night?'#14161e':'#1e1418'):hex(night?'#2c3048':'#4a2c30');
+  const d=Math.hypot(r-22,y-9.5);if(d<7)c=mix(c,hex('#ffb35a'),d<4?.35:.18);return c}
+// 하이레스 항목용: 저해상도 원본을 따로 만들어 128px 캔버스에 4배로 그린다
+let OFF=null;
+function off(){if(OFF)return OFF;
+  const mk=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),im=g.createImageData(w,h);
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){const v=fn(x,y);if(!v)continue;const i=(y*w+x)*4;im.data[i]=v[0]*255;im.data[i+1]=v[1]*255;im.data[i+2]=v[2]*255;im.data[i+3]=255}
+   g.putImageData(im,0,0);return c};
+  const world=mk(96,32,wpix);
+  const hero=mk(9,10,(x,y)=>{if(y===4&&(x===3||x===6))return INK;const dx=(x+.5-4.5)/4.5,dy=(y+.5-5)/5,q=dx*dx+dy*dy;return q<=1?quant(BALL,litT([dx,dy,Math.sqrt(1-q)])):null});
+  const sign=mk(10,14,(x,y)=>{if(y<4)return(x===4||x===5)?hex('#2a1c1c'):null;if(x===0||x===9||y===4||y===13)return hex('#2a1c1c');return(y>6&&y<11&&x>2&&x<7)?hex('#fff3cc'):hex('#ffc85a')});
+  const big=document.createElement('canvas');big.width=384;big.height=128;const bg=big.getContext('2d');bg.imageSmoothingEnabled=false;bg.drawImage(world,0,0,384,128);
+  return OFF={world,hero,sign,big}}
+function ctx2(cv){const c=cv.getContext('2d');c.setTransform(1,0,0,1,0,0);c.imageSmoothingEnabled=false;return c}
+// 확대와 회전 항목용: 색 번호 배열 스프라이트와 보간 함수
+function scale2x(s,w,h){const o=new Array(w*h*4),W=w*2,g=(x,y)=>s[Math.min(h-1,Math.max(0,y))*w+Math.min(w-1,Math.max(0,x))];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const P=g(x,y),A=g(x,y-1),Bq=g(x+1,y),C=g(x-1,y),D=g(x,y+1);let e0=P,e1=P,e2=P,e3=P;
+   if(C===A&&C!==D&&A!==Bq)e0=A;if(A===Bq&&A!==C&&Bq!==D)e1=Bq;if(D===C&&D!==Bq&&C!==A)e2=C;if(Bq===D&&Bq!==A&&D!==C)e3=D;
+   o[2*y*W+2*x]=e0;o[2*y*W+2*x+1]=e1;o[(2*y+1)*W+2*x]=e2;o[(2*y+1)*W+2*x+1]=e3}return o}
+const x8=(s,w)=>scale2x(scale2x(scale2x(s,w,w),w*2,w*2),w*4,w*4);
+let SRC=null,SRC8=null;
+const SPAL=()=>[PAPER,hex('#141019'),BALL[1],BALL[2],BALL[3],BALL[4],hex('#ffffff')];
+function src16(){if(SRC)return SRC;const a=new Array(256).fill(0),inside=(x,y)=>{if(x<0||y<0||x>15||y>15)return false;const dx=(x+.5-8)/6.5,dy=(y+.5-8.5)/6.5;return dx*dx+dy*dy<=1};
+  for(let y=0;y<16;y++)for(let x=0;x<16;x++){if(inside(x,y)){const dx=(x+.5-8)/6.5,dy=(y+.5-8.5)/6.5;a[y*16+x]=2+Math.min(3,Math.floor(litT([dx,dy,Math.sqrt(Math.max(0,1-dx*dx-dy*dy))])*4))}
+   else if(inside(x+1,y)||inside(x-1,y)||inside(x,y+1)||inside(x,y-1))a[y*16+x]=1}
+  a[8*16+6]=1;a[8*16+9]=1;a[5*16+5]=6;return SRC=a}
+const scol=(x,y)=>SPAL()[src16()[Math.min(15,Math.max(0,y))*16+Math.min(15,Math.max(0,x))]];
+const nearest8=(x,y)=>scol(Math.floor(x/8),Math.floor(y/8));
+const bilinear8=(x,y)=>{const u=(x+.5)/8-.5,v=(y+.5)/8-.5,x0=Math.floor(u),y0=Math.floor(v),fx=u-x0,fy=v-y0;return mix(mix(scol(x0,y0),scol(x0+1,y0),fx),mix(scol(x0,y0+1),scol(x0+1,y0+1),fx),fy)};
+const keys=t=>{t=Math.abs(t);const A=-.5;return t<1?(A+2)*t**3-(A+3)*t*t+1:t<2?A*t**3-5*A*t*t+8*A*t-4*A:0};
+const bicubic8=(x,y)=>{const u=(x+.5)/8-.5,v=(y+.5)/8-.5,x0=Math.floor(u),y0=Math.floor(v);let r=[0,0,0];
+  for(let j=-1;j<=2;j++)for(let i=-1;i<=2;i++){const w=keys(u-x0-i)*keys(v-y0-j),c=scol(x0+i,y0+j);r=r.map((q,k)=>q+c[k]*w)}return r};
+const scaler8=(x,y)=>{SRC8=SRC8||x8(src16(),16);return SPAL()[SRC8[y*128+x]]};
+function paint128(cv,fn){const c=cv.getContext('2d'),im=c.createImageData(128,128);
+  for(let y=0;y<128;y++)for(let x=0;x<128;x++){const v=fn(x,y),i=(y*128+x)*4;im.data[i]=cl(v[0])*255;im.data[i+1]=cl(v[1])*255;im.data[i+2]=cl(v[2])*255;im.data[i+3]=255}c.putImageData(im,0,0)}
+const crateIdx=(lx,ly)=>(lx<0||ly<0||lx>13||ly>13)?0:(lx===0||ly===0||lx===13||ly===13)?1:ly===1?4:(ly===7||lx===ly)?3:2;
+const CPAL=()=>[null,hex('#4a2e1c'),hex('#b07a46'),hex('#7a5030'),hex('#e0a868')];
+let CR=null,CR8=null,CRCV=null;
+function rotDraw(B,a,th){if(!CR){CR=[];for(let y=0;y<16;y++)for(let x=0;x<16;x++)CR.push(crateIdx(x-1,y-1))}if(a&&!CR8)CR8=x8(CR,16);
+  const co=Math.cos(th),si=Math.sin(th),P=CPAL();
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-16,dy=y+.5-16,sx=co*dx+si*dy+8,sy=-si*dx+co*dy+8;if(sx<0||sy<0||sx>=16||sy>=16)continue;
+   const idx=a?CR8[Math.floor(sy*8)*128+Math.floor(sx*8)]:CR[Math.floor(sy)*16+Math.floor(sx)];if(idx)B.set(x,y,P[idx])}}
+function crateCv(){if(CRCV)return CRCV;const c=Object.assign(document.createElement('canvas'),{width:14,height:14}),g=c.getContext('2d'),im=g.createImageData(14,14),P=CPAL();
+  for(let y=0;y<14;y++)for(let x=0;x<14;x++){const v=P[crateIdx(x,y)],i=(y*14+x)*4;im.data[i]=v[0]*255;im.data[i+1]=v[1]*255;im.data[i+2]=v[2]*255;im.data[i+3]=255}g.putImageData(im,0,0);return CRCV=c}
+// 화면 연출 항목용: 3x5 숫자 글꼴, 코인, 창
+const FONT={'0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111','+':'000010111010000','!':'010010010000010'};
+function text(B,str,x,y,c,al=1){for(const ch of str){const g=FONT[ch];for(let i=0;i<15;i++)if(g[i]==='1'){const px=x+i%3,py=y+Math.floor(i/3);if(px>=0&&py>=0&&px<N&&py<N)B.set(px,py,mix(B.get(px,py),c,al))}x+=4}}
+function coin(B,x,y){[[1,0],[2,0],[0,1],[1,1],[2,1],[3,1],[0,2],[1,2],[2,2],[3,2],[1,3],[2,3]].forEach(([i,j])=>B.set(x+i,y+j,i+j>3?hex('#b07a20'):i+j<2?hex('#fff0a0'):hex('#ffc830')))}
+function panel(B,cx,cy,w,h){if(w<2||h<2)return;const x0=Math.round(cx-w/2),x1=Math.round(cx+w/2)-1,y0=Math.round(cy-h/2),y1=Math.round(cy+h/2)-1;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let c=(x===x0||x===x1||y===y0||y===y1)?hex('#3a2a2a'):y<=y0+2?hex('#c9925a'):hex('#efe4cc');
+   if(c!==hex('#3a2a2a')&&(y===y0+5||y===y0+8)&&x>x0+2&&x<x1-2)c=hex('#b8a888');B.set(x,y,c)}}
+const inEll=(x,y,cx,cy,rx,ry)=>{const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;return dx*dx+dy*dy<=1};
+function view(B,cx,cy=0,z=1){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,wpix(Math.floor(cx+(x+.5)/z),Math.floor(cy+(y+.5)/z)))}
+
+const CATS=[
+ {id:'light',name:'빛과 그림자',en:'LIGHT & SHADOW'},
+ {id:'material',name:'재질 표현',en:'MATERIAL'},
+ {id:'color',name:'팔레트와 색',en:'PALETTE & COLOR'},
+ {id:'pixel',name:'픽셀아트 기법',en:'PIXEL TECHNIQUE'},
+ {id:'post',name:'화면 후처리',en:'POST PROCESS'},
+ {id:'motion',name:'움직임',en:'MOTION'},
+ {id:'camera',name:'카메라와 렌더링',en:'CAMERA & RENDERING'},
+ {id:'scale',name:'확대와 회전',en:'SCALING & ROTATION'},
+ {id:'fx',name:'화면 연출',en:'SCREEN FX'}];
+
+const TERMS=[
+{cat:'light',ko:'AO, 앰비언트 오클루전',en:'Ambient Occlusion',b:'없음',a:'AO',
+ d:'물체끼리 맞닿거나 오목한 곳은 주변 빛이 덜 들어 어두워집니다. 광원 방향과 상관없이 생기는 은은한 그림자입니다.',
+ t:'접촉면에 한두 픽셀 짙은 색을 넣으면 됩니다. 없으면 상자가 바닥에서 떠 보입니다.',
+ draw(B,a){floorWall(B,WALL,FLOOR,19);
+  if(a)for(let x=0;x<N;x++){darken(B,x,19,.72);darken(B,x,18,.86)}
+  for(let y=11;y<=24;y++)for(let x=9;x<=22;x++){let c=y<=13?hex('#c9925a'):(y===18?hex('#7a5030'):hex('#9c6a3e'));if(x===9||x===22||y===11||y===24||y===14)c=hex('#4a2e1c');B.set(x,y,c)}
+  if(a){for(let x=10;x<=21;x++)darken(B,x,23,.8);for(let x=8;x<=23;x++)darken(B,x,25,.55);for(let x=9;x<=22;x++)darken(B,x,26,.75);for(let x=11;x<=20;x++)darken(B,x,27,.9)}}},
+{cat:'light',ko:'캐스트 섀도, 드리운 그림자',en:'Cast Shadow',b:'없음',a:'있음',
+ d:'물체가 빛을 가려 다른 면 위에 떨어지는 그림자입니다. 공의 높이와 위치를 알려 줍니다.',
+ draw(B,a){floorWall(B,WALL,FLOOR,17);
+  if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-19)/8,dy=(y+.5-26)/2.3;if(dx*dx+dy*dy<=1)darken(B,x,y,.55)}
+  sphere(B,14,11,6.5,n=>quant(BALL,litT(n)))}},
+{cat:'light',ko:'폼 섀도, 코어 섀도',en:'Form Shadow / Core Shadow',b:'단색',a:'명암',
+ d:'빛을 등진 쪽에 물체 스스로 생기는 그림자입니다. 그중 가장 어두운 띠가 코어 섀도입니다. 이것만으로 평면 원이 구가 됩니다.',
+ draw(B,a){fill(B,PAPER);sphere(B,16,16,11.5,n=>a?quant(BALL,litT(n)):BALL[3])}},
+{cat:'light',ko:'터미네이터, 명암 경계선',en:'Terminator',b:'딱 끊김',a:'부드러움',
+ d:'밝은 면과 그림자 면이 갈리는 경계입니다. 딱 끊기면 금속이나 돌처럼 단단하게, 번지면 살결이나 천처럼 말랑하게 읽힙니다.',
+ draw(B,a){fill(B,PAPER);sphere(B,16,16,11.5,n=>{const l=dot(n,L);return a?quant(BALL,litT(n)):(l>.05?BALL[3]:BALL[1])})}},
+{cat:'light',ko:'반사광',en:'Bounce Light',b:'없음',a:'바닥 반사',
+ d:'바닥이나 주변에 튕겨 그림자 쪽으로 다시 들어오는 약한 빛입니다. 그림자 아래쪽이 바닥 색으로 살짝 밝아집니다.',
+ t:'반사광은 절대 빛 받는 면보다 밝으면 안 됩니다.',
+ draw(B,a){const F=hex('#d08c3a');floorWall(B,WALL,F,24);
+  for(let x=9;x<=23;x++)darken(B,x,25,.7);
+  sphere(B,16,14.5,9.5,n=>{const l=dot(n,L);let c=quant(BALL,litT(n));if(a&&l<.05&&n[1]>.4)c=mix(BALL[1],F,.42);return c})}},
+{cat:'light',ko:'림 라이트, 역광 윤곽광',en:'Rim Light',b:'없음',a:'림 라이트',
+ d:'뒤에서 오는 빛 때문에 실루엣 가장자리에 생기는 얇은 밝은 선입니다. 어두운 배경에서 물체를 떼어 보이게 합니다.',
+ t:'어두운 주점 같은 화면에서 캐릭터 가독성을 크게 올려 줍니다.',
+ draw(B,a){fill(B,DARK);sphere(B,16,16,11,n=>{let c=quant(BALL,litT(n)*.55);if(a){const k=n[0]*.8-n[1]*.45;if(n[2]<.42&&k>.3)c=hex('#ffd28a');else if(n[2]<.6&&k>.45)c=mix(BALL[2],hex('#ffd28a'),.35)}return c})}},
+{cat:'light',ko:'GI, 전역 조명',en:'Global Illumination',b:'직접광만',a:'색 번짐',ref:true,
+ d:'빛이 여러 번 튕기는 것까지 계산한 조명입니다. 빨간 벽 옆에 있는 흰 공과 바닥이 붉게 물드는 색 번짐이 그 예입니다.',
+ draw(B,a){const R=hex('#c23a32'),W=['#4c4c58','#7c7c88','#adadb6','#dcdce2','#ffffff'].map(hex);
+  floorWall(B,hex('#e6e2da'),hex('#c8c2b6'),22);
+  for(let y=0;y<N;y++)for(let x=0;x<7;x++)B.set(x,y,R);
+  if(a)for(let y=0;y<N;y++)for(let x=7;x<14;x++)B.set(x,y,mix(B.get(x,y),R,.28*(1-(x-7)/7)));
+  for(let x=13;x<=25;x++)darken(B,x,26,.8);
+  sphere(B,19,17,8.5,n=>{let c=quant(W,litT(n));if(a&&n[0]<-.25)c=mix(c,R,.4*Math.min(1,-n[0]+.2));return c})}},
+
+{cat:'material',ko:'SSS, 서브서피스 스캐터링',en:'Subsurface Scattering',b:'회색 경계',a:'붉은 산란',
+ d:'빛이 표면 안으로 살짝 들어가 퍼졌다가 나오는 현상입니다. 피부, 귀, 왁스, 잎사귀에서 보이고, 역광을 받은 귀가 붉게 비치는 게 이 현상입니다.',
+ t:'명암 경계 근처에 채도 높은 주홍을 한 줄 넣습니다. 회색으로 칠하면 살결이 흙빛이 됩니다.',
+ draw(B,a){fill(B,PAPER);const S=(a?['#4a2430','#c2473a','#d98c6c','#f2bc98','#ffe3cf']:['#3a302f','#6e5f5c','#c98a72','#efbb9c','#ffe3cf']).map(hex);
+  sphere(B,16,16,11.5,n=>quant(S,litT(n)))}},
+{cat:'material',ko:'스페큘러, 정반사 하이라이트',en:'Specular',b:'디퓨즈만',a:'스페큘러',
+ d:'광원이 표면에 거울처럼 비쳐 생기는 밝은 점입니다. 작고 선명할수록 매끈하고 광택 있게, 크고 흐릴수록 거칠게 보입니다. 빛이 사방으로 흩어져 생기는 기본 명암은 디퓨즈라고 합니다.',
+ draw(B,a){fill(B,PAPER);const H=norm([L[0],L[1],L[2]+1]);
+  sphere(B,16,16,11.5,n=>{const s=dot(n,H);if(a&&s>.975)return hex('#ffffff');if(a&&s>.94)return hex('#e6f7f4');return quant(BALL,litT(n))})}},
+{cat:'material',ko:'애니소트로픽 하이라이트',en:'Anisotropic Highlight',b:'점 하이라이트',a:'띠 하이라이트',
+ d:'결이 한 방향으로 난 표면에서 하이라이트가 점이 아니라 길쭉한 띠로 늘어나는 현상입니다. 머리카락의 천사 링, 헤어라인 금속, 실크가 예입니다.',
+ t:'머리카락이면 결과 직각으로 휘어진 띠를 넣고, 중간중간 끊어 가닥 느낌을 냅니다.',
+ draw(B,a){fill(B,PAPER);const HR=['#2a1620','#4e2a2a','#7a4632','#a8683e','#e8b46c'].map(hex),H=norm([L[0],L[1],L[2]+1]);
+  sphere(B,16,17,12,(n,x,y)=>{const bang=17+[2,1,0][x%3];if(y>=bang&&Math.abs(x+.5-16)<7.5)return hex('#f2c6a4');
+   let c=quant(HR,litT(n));const rr=Math.hypot(n[0],n[1]);
+   if(a){if(n[1]<-.05&&Math.abs(rr-.62)<.07&&(x+y)%5!==0)c=HR[4];else if(n[1]<-.05&&Math.abs(rr-.62)<.14&&litT(n)>.3)c=HR[3]}
+   else if(dot(n,H)>.95)c=HR[4];return c})}},
+{cat:'material',ko:'프레넬',en:'Fresnel',b:'균일 반사',a:'프레넬',
+ d:'비스듬히 볼수록 반사가 강해지는 현상입니다. 멀리 있는 물웅덩이에 하늘이 비치는 것도, 구의 가장자리가 주변 색으로 밝아지는 것도 이 때문입니다.',
+ draw(B,a){const T=hex('#8ec9ea'),Bo=hex('#e4f2f6');for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(T,Bo,y/31));
+  const D=['#0f1f36','#1a3354','#26496f','#3a6890'].map(hex);
+  sphere(B,16,16,11.5,(n,x,y)=>{const base=quant(D,litT(n)),sky=mix(T,Bo,y/31);
+   const f=a?Math.floor(Math.pow(1-n[2],2)*4)/4:0;return mix(base,sky,.12+.8*f)})}},
+{cat:'material',ko:'노멀 맵',en:'Normal Map',b:'평면 스프라이트',a:'요철 조명',
+ d:'표면 요철의 방향을 색으로 저장한 텍스처입니다. 평평한 2D 스프라이트에도 입체 조명을 입힐 수 있어서, 2D 게임의 다이나믹 라이팅은 대부분 이 방식입니다.',
+ draw(B,a){bricks(B,false,a)}},
+
+{cat:'pixel',ko:'디더링',en:'Dithering',b:'계단 경계',a:'디더링',
+ d:'색이 부족할 때 두 색 픽셀을 체크무늬처럼 섞어 중간색이나 그라데이션처럼 보이게 하는 기법입니다.',
+ t:'많이 쓰면 지저분해집니다. 하늘, 넓은 그림자, 돌과 천 같은 재질감에만 씁니다.',
+ draw(B,a){const P=['#2a2350','#8a4a6a','#e0785a'].map(hex);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const g=y/31*2,i=Math.min(1,Math.floor(g)),f=g-i;
+   const up=a?f>(BAYER[y%4][x%4]+.5)/16:f>=.5;let c=P[up?i+1:i];
+   if(y>25+Math.sin(x/3.5)*2)c=hex('#1a1424');B.set(x,y,c)}}},
+{cat:'pixel',ko:'밴딩',en:'Banding',b:'실수',a:'고침',
+ d:'명암 단계가 외곽선을 그대로 따라 같은 두께로 나란히 쌓이는 실수입니다. 형태 대신 줄무늬가 먼저 보입니다. 일반 그래픽에서는 그라데이션에 띠가 지는 현상을 말합니다.',
+ draw(B,a){fill(B,PAPER);sphere(B,16,16,11.5,(n,x,y,q)=>{if(a)return quant(BALL,litT(n));const e=(1-Math.sqrt(q))*11.5;return e<1?BALL[0]:e<2?BALL[1]:e<3?BALL[2]:BALL[3]})}},
+{cat:'pixel',ko:'필로 셰이딩',en:'Pillow Shading',b:'실수',a:'고침',
+ d:'광원을 무시하고 바깥에서 안쪽으로 갈수록 밝게 칠하는 방식입니다. 베개처럼 부풀어 보이고, 초보 때 가장 많이 하는 실수입니다.',
+ draw(B,a){fill(B,PAPER);sphere(B,16,16,11.5,(n,x,y,q)=>a?quant(BALL,litT(n)):quant(BALL,(1-Math.sqrt(q))*1.25))}},
+{cat:'pixel',ko:'안티에일리어싱',en:'Anti-aliasing',b:'없음',a:'AA',
+ d:'곡선과 대각선의 계단을 중간색 픽셀로 다듬는 것입니다. 픽셀아트에서는 손으로 찍습니다.',
+ t:'외곽에 넣은 AA는 배경색이 바뀌면 테두리가 떠 보일 수 있습니다.',
+ draw(B,a){fill(B,PAPER);for(let y=0;y<N;y++)for(let x=0;x<N;x++){let cov=0;for(let j=0;j<4;j++)for(let i=0;i<4;i++){const dx=x+(i+.5)/4-15.3,dy=y+(j+.5)/4-16.2;if(dx*dx+dy*dy<=10.4*10.4)cov++}cov/=16;
+  if(a&&cov>.12&&cov<.88)B.set(x,y,mix(PAPER,INK,Math.round(cov*3)/3));else if(cov>=.5)B.set(x,y,INK)}}},
+{cat:'pixel',ko:'재기',en:'Jaggies',b:'불규칙',a:'규칙적',
+ d:'선의 픽셀 계단이 들쭉날쭉해서 거칠어 보이는 부분입니다. 계단 길이를 일정하게, 또는 1, 2, 3처럼 고르게 늘리면 깔끔해집니다.',
+ draw(B,a){fill(B,PAPER);const lens=a?[2,2,2,2,2,2,2,2,2,2,2,2]:[3,1,2,1,4,1,1,3,2,1,3,2];let x=4,y=24;
+  for(const l of lens){for(let k=0;k<l;k++){B.set(x,y,INK);B.set(x,y+1,INK);x++}y--}}},
+{cat:'pixel',ko:'셀아웃',en:'Sel-out, Selective Outlining',b:'검정 외곽선',a:'셀아웃',
+ d:'외곽선을 한 가지 검정으로 두르지 않고, 빛 받는 쪽은 밝게 그림자 쪽은 어둡게 부위마다 색을 바꾸는 방법입니다. 실루엣이 덜 딱딱해집니다.',
+ draw(B,a){fill(B,PAPER);const cx=16,cy=16,r=10.5;sphere(B,cx,cy,r,n=>quant(BALL,litT(n)));
+  const inside=(x,y)=>inSphere(x,y,cx,cy,r);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(inside(x,y))continue;const nb=[[1,0],[-1,0],[0,1],[0,-1]].find(([i,j])=>inside(x+i,y+j));
+   if(nb)B.set(x,y,a?mul(B.get(x+nb[0],y+nb[1]),.55):hex('#0e0b14'))}}},
+{cat:'color',ko:'휴 시프팅',en:'Hue Shifting',b:'밝기만',a:'색상 이동',
+ d:'명암 단계를 바꿀 때 밝기만이 아니라 색상도 옮기는 방법입니다. 밝은 쪽은 노랑으로, 어두운 쪽은 파랑이나 보라로 옮기면 팔레트가 탁해지지 않습니다.',
+ t:'아래 줄이 그 물체에 쓴 램프(색 단계)입니다.',
+ draw(B,a){fill(B,PAPER);const R=(a?['#1f2346','#1f5250','#3f8a3a','#9cc24a','#f2e98a']:['#1f3d1f','#2f5c2f','#3f7a3f','#5a9f5a','#8cc98c']).map(hex);
+  sphere(B,16,13,10,n=>quant(R,litT(n)));R.forEach((c,i)=>{for(let y=27;y<31;y++)for(let x=3+i*5;x<3+i*5+5;x++)B.set(x,y,c)})}},
+{cat:'motion',ko:'서브픽셀 애니메이션',en:'Sub-pixel Animation',b:'1px 점프',a:'서브픽셀',anim:true,
+ d:'픽셀을 옮기지 않고 가장자리 색만 바꿔서 1픽셀보다 작은 움직임처럼 보이게 하는 기법입니다. 숨 쉬기, 미세한 흔들림 같은 대기 동작에 씁니다.',
+ draw(B,a,f=.5){fill(B,PAPER);for(let x=0;x<N;x++)for(let y=24;y<N;y++)B.set(x,y,hex('#cfc8b8'));
+  const off=a?f:(f<.5?0:1),x0=11+off,x1=21+off;
+  for(let y=10;y<=23;y++)for(let x=0;x<N;x++){const cov=cl(Math.min(x+1,x1)-Math.max(x,x0));if(cov>0){const body=y<=12?BALL[3]:BALL[2];B.set(x,y,mix(B.get(x,y),body,cov))}}}},
+
+{cat:'post',ko:'블룸',en:'Bloom',b:'없음',a:'블룸',
+ d:'밝은 부분 주위로 빛이 번지는 효과입니다. 촛불, 랜턴, 마법처럼 스스로 빛나는 것에 씁니다.',
+ draw(B,a){floorWall(B,DARK,hex('#231a28'),24);
+  for(let y=9;y<=17;y++)for(let x=13;x<=19;x++){let c=hex('#3a2a2a');if(x>13&&x<19&&y>9&&y<17)c=(x>14&&x<18&&y>11&&y<15)?hex('#fff6d8'):hex('#ffd98a');B.set(x,y,c)}
+  if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d2=(x-16)**2+(y-13)**2,g=Math.exp(-d2/45)*.6;B.set(x,y,B.get(x,y).map((v,i)=>v+[1,.72,.38][i]*g))}}},
+{cat:'post',ko:'톤 매핑',en:'Tone Mapping',b:'잘림',a:'톤 매핑',ref:true,
+ d:'너무 밝은 값을 화면이 표현할 수 있는 범위로 압축하는 과정입니다. 없으면 밝은 곳이 하얗게 날아가 벽돌 무늬가 사라집니다.',
+ draw(B,a){bricks(B,false,false);const col=[1,.82,.58];
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const alb=B.get(x,y),v=.35+3.6*Math.exp(-((x-16)**2+(y-14)**2)/70);
+   B.set(x,y,alb.map((c,i)=>{const h=c*v*col[i]*1.6;return a?h/(1+h)*1.5:h}))}}},
+{cat:'post',ko:'셀 셰이딩, 툰 셰이딩',en:'Cel Shading',b:'부드러운 명암',a:'3단 끊음',
+ d:'명암을 그라데이션 대신 2~3단계로 딱 끊어서 만화처럼 칠하는 방식입니다.',
+ draw(B,a){fill(B,PAPER);const C=[BALL[1],BALL[3],BALL[4]];sphere(B,16,16,11.5,n=>a?quant(C,litT(n)):smooth(BALL,litT(n)))}},
+{cat:'post',ko:'비네트',en:'Vignette',b:'없음',a:'비네트',
+ d:'화면 가장자리를 어둡게 해서 시선을 가운데로 모으는 효과입니다.',
+ draw(B,a){tavern(B);
+  if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x-15.5,y-15.5)/22;darken(B,x,y,1-.7*d*d)}}},
+{cat:'post',ko:'컬러 그레이딩, LUT',en:'Color Grading / LUT',b:'원본',a:'저녁 그레이딩',
+ d:'화면 전체 색감을 한 번에 바꾸는 후처리입니다. 바꾸는 규칙을 표로 저장한 것이 LUT입니다. 그림을 다시 그리지 않고 시간대, 날씨, 이벤트 분위기를 바꿀 수 있습니다.',
+ draw(B,a){tavern(B);if(!a)return;const sh=hex('#1a2a4a'),hi=hex('#ffb070');
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=B.get(x,y),v=lum(c);B.set(x,y,mix(mix(c,sh,.45*(1-v)),hi,.35*v))}}},
+
+{cat:'light',ko:'이미시브, 자체 발광',en:'Emissive',b:'그냥 주황색',a:'발광',
+ d:'랜턴, 화로, 창문처럼 스스로 빛나는 부분입니다. 그림자 없이 가장 밝은 값을 쓰고, 주변에 빛을 나눠 줘야 빛나 보입니다.',
+ t:'광원만 밝게 칠하면 주황색 물건일 뿐입니다. 주변 벽까지 함께 밝혀야 합니다.',
+ draw(B,a){bricks(B,true,false);
+  if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x-16,y-14),k=d<6?.55:d<9?.3:d<12?.12:0;if(k)B.set(x,y,mix(B.get(x,y),hex('#ffb35a'),k))}
+  for(let y=9;y<=19;y++)for(let x=12;x<=20;x++){const edge=x===12||x===20||y===9||y===19;
+   B.set(x,y,edge?hex('#2a1c1c'):a?((x>13&&x<19&&y>11&&y<17)?hex('#fff3cc'):hex('#ffc85a')):(x<16?hex('#c47a3a'):hex('#8a5028')))}
+  for(let x=14;x<=18;x++)B.set(x,8,hex('#2a1c1c'))}},
+{cat:'light',ko:'볼류메트릭 라이트, 갓 레이',en:'Volumetric Light / God Rays',b:'없음',a:'빛줄기',
+ d:'먼지나 연기 낀 공기 속에서 빛이 지나가는 길 자체가 보이는 현상입니다. 창으로 들어오는 빛줄기가 흔한 예입니다.',
+ t:'반투명한 밝은 색을 두세 단계로 얹고, 떠다니는 먼지 픽셀 몇 개를 더하면 공기가 생깁니다.',
+ draw(B,a){bricks(B,true,false);for(let y=24;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,hex('#3a2c26'));
+  for(let y=2;y<=9;y++)for(let x=3;x<=9;x++)B.set(x,y,(x===3||x===9||y===2||y===9||x===6||y===5)?hex('#1a1214'):hex('#ffe2a8'));
+  if(!a)return;const dir=norm([1,1.25,0]);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(x>=3&&x<=9&&y>=2&&y<=9)continue;const px=x-6,py=y-5.5,t=px*dir[0]+py*dir[1],d=Math.abs(px*dir[1]-py*dir[0]);
+   if(t>2){const w=3+t*.12,k=d<w*.45?.32:d<w?.16:0;if(k){B.set(x,y,mix(B.get(x,y),hex('#ffd890'),k));if(hash(x,y)>.94)B.set(x,y,hex('#fff2cc'))}}}}},
+{cat:'light',ko:'색온도 대비',en:'Warm Light, Cool Shadow',b:'밝기만',a:'따뜻한 빛, 차가운 그림자',
+ d:'빛 받는 면은 따뜻하게, 그림자는 차갑게 잡는 원칙입니다. 노란 불빛 아래의 그림자가 푸르게 느껴지는 것과 같습니다.',
+ draw(B,a){const W=(a?['#1c1d3a','#3a3f6e','#8a7a8a','#e0b080','#ffe8b8']:['#2a2622','#4f4840','#857a6c','#c4b6a2','#f0e6d6']).map(hex);
+  floorWall(B,a?hex('#4a3a40'):hex('#4a4440'),a?hex('#8a6a50'):hex('#7a7068'),22);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-19)/9,dy=(y+.5-26)/2.4;if(dx*dx+dy*dy<=1)B.set(x,y,a?mix(B.get(x,y),hex('#2a2c58'),.55):mul(B.get(x,y),.55))}
+  sphere(B,15,16,9.5,n=>quant(W,litT(n)))}},
+
+{cat:'pixel',ko:'밸류 대비, 명도 대비',en:'Value Contrast',b:'약한 대비 (흑백)',a:'강한 대비 (흑백)',
+ d:'색을 빼고 밝기만 남겨도 형태가 읽히는지 보는 기준입니다. 색이 달라도 명도가 비슷하면 흑백에서 물체가 배경에 녹아 버립니다.',
+ t:'작업 중간에 흑백으로 바꿔 보는 습관이 셰이딩을 가장 빨리 늘게 합니다.',
+ draw(B,a){fill(B,a?hex('#26332c'):hex('#6a8a62'));const R=(a?['#3a1420','#7a2a30','#c0503c','#f08a5a','#ffd8a8']:['#7a4a40','#8a5448','#9a5e4e','#a86a58','#b87862']).map(hex);
+  sphere(B,16,16,11,n=>quant(R,litT(n)));
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=lum(B.get(x,y));B.set(x,y,[v,v,v])}}},
+{cat:'pixel',ko:'클러스터, 고아 픽셀',en:'Clusters / Orphan Pixels',b:'흩어진 픽셀',a:'클러스터',
+ d:'같은 색 픽셀은 덩어리(클러스터)로 뭉쳐야 형태가 됩니다. 홀로 떨어진 한 픽셀(고아 픽셀)은 확대해 보면 노이즈입니다.',
+ draw(B,a){fill(B,PAPER);sphere(B,16,16,11.5,(n,x,y)=>quant(BALL,cl(litT(n)+(a?0:(hash(x,y)-.5)*.42))))}},
+{cat:'pixel',ko:'실루엣 가독성',en:'Silhouette Readability',b:'뭉친 자세',a:'읽히는 자세',
+ d:'캐릭터를 검은 덩어리로만 칠해도 누구인지, 무엇을 하는지 읽혀야 합니다. 팔다리를 몸에서 떼고 무기나 모자 같은 특징을 바깥으로 빼면 좋아집니다.',
+ t:'작은 스프라이트일수록 실루엣이 디테일보다 중요합니다.',
+ draw(B,a){fill(B,PAPER);const r=(x0,y0,x1,y1)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)B.set(x,y,INK)};
+  const head=(cx,cy)=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-cx,y+.5-cy)<=3.6)B.set(x,y,INK)};
+  if(!a){head(16,8);r(11,12,20,24);r(12,25,19,29);return}
+  head(15,8);r(10,4,20,4);r(12,3,18,3);r(12,12,18,22);r(8,13,11,14);r(6,14,8,18);r(19,13,22,14);r(22,10,23,15);
+  for(let i=0;i<9;i++)B.set(23+Math.floor(i/3),9-i,INK);r(11,23,13,29);r(17,23,19,26);r(19,26,21,29)}},
+{cat:'pixel',ko:'대기 원근',en:'Atmospheric Perspective',b:'같은 진하기',a:'대기 원근',
+ d:'멀리 있는 것일수록 대비가 줄고 하늘색에 가까워지는 현상입니다. 층마다 진하기를 달리해야 거리감이 생깁니다.',
+ t:'패럴랙스 배경의 각 층에 그대로 씁니다.',
+ draw(B,a){const SK=hex('#b8d4e0');for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(hex('#8ab8d0'),SK,y/31));
+  const base=hex('#2a3448');[[12,3.2,.9,.62],[17,4.5,1.7,.36],[23,2.6,1.1,0]].forEach(([h,fr,amp,fog],li)=>{const c=a?mix(base,SK,fog):base;
+   for(let x=0;x<N;x++){const top=h+Math.sin(x/fr+li*2)*amp*2;for(let y=Math.ceil(top);y<N;y++)B.set(x,y,c)}})}},
+
+{cat:'motion',ko:'플리커, 불빛 깜박임',en:'Flicker',b:'고정 조명',a:'플리커',anim:true,
+ d:'촛불과 화로의 빛이 불규칙하게 흔들리는 조명 애니메이션입니다. 빛 반경과 밝기를 조금씩, 규칙 없이 바꿉니다.',
+ t:'일정한 주기로 깜박이면 고장 난 전등처럼 보입니다. 주기가 다른 흔들림 두세 개를 겹칩니다.',
+ draw(B,a,f,s=0){fill(B,DARK);for(let y=22;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,hex('#221a24'));
+  const k=a?.88+.14*(Math.sin(s*11)*.5+Math.sin(s*6.7+1)*.3+Math.sin(s*23)*.2):1;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x-16,y-14)/k,v=d<5?.35:d<9?.2:d<13?.08:0;if(v)B.set(x,y,mix(B.get(x,y),hex('#ff9a40'),v))}
+  for(let y=16;y<=22;y++)for(let x=14;x<=17;x++)B.set(x,y,hex('#e8dcc0'));
+  const fh=a&&k>.95?4:3;for(let i=0;i<fh;i++){B.set(15,15-i,i===0?hex('#fff6d0'):hex('#ffb040'));if(i<fh-1)B.set(16,15-i,hex('#ffd070'))}}},
+{cat:'motion',ko:'패럴랙스, 시차 스크롤',en:'Parallax Scrolling',b:'같은 속도',a:'층마다 다른 속도',anim:true,
+ d:'배경을 여러 층으로 나누고 먼 층은 느리게, 가까운 층은 빠르게 움직여 깊이를 만드는 기법입니다.',
+ draw(B,a,f,s=0){const o=s*6;fill(B,hex('#c9dbe4'));
+  [[.2,11,4,hex('#9fb4c4')],[.5,17,3,hex('#5f7488')],[1,23,2,hex('#2a3448')]].forEach(([sp,h,fr,c],i)=>{const off=o*(a?sp:1);
+   for(let x=0;x<N;x++){const X=x+off,top=h+Math.sin(X/fr+i)*2+(i===2&&Math.floor(X)%7<1?-5:0);for(let y=Math.ceil(top);y<N;y++)B.set(x,y,c)}})}},
+{cat:'motion',ko:'이징, 가감속',en:'Easing (Ease In / Out)',b:'일정한 속도',a:'이즈 인, 이즈 아웃',anim:true,
+ d:'움직임의 시작은 천천히 빨라지고 끝은 천천히 멈추게 하는 것입니다. 일정한 속도로만 움직이면 기계처럼 딱딱해 보입니다.',
+ t:'아래 눈금이 프레임 위치입니다. 양 끝은 촘촘하게, 가운데는 성기게 둡니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);for(let x=0;x<N;x++)B.set(x,24,hex('#cfc8b8'));
+  const ease=u=>a?u*u*(3-2*u):u,ph=(s/2.4)%1,lin=ph<.5?ph*2:2-ph*2;
+  for(let i=0;i<=8;i++)B.set(Math.round(7+ease(i/8)*18),26,hex('#8a8070'));
+  sphere(B,7+ease(lin)*18,17,5,n=>quant(BALL,litT(n)))}},
+{cat:'motion',ko:'스쿼시 앤 스트레치',en:'Squash & Stretch',b:'딱딱한 공',a:'눌림과 늘어남',anim:true,
+ d:'바닥에 닿을 때 납작하게 눌리고, 빠르게 움직일 때 길게 늘어나는 표현입니다. 부피는 그대로 두고 모양만 바꿉니다.',
+ t:'가로로 넓어진 만큼 세로를 줄여야 물체가 커지거나 작아져 보이지 않습니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,26);const ph=(s/1.1)%1,h=4*ph*(1-ph),sp=Math.abs(1-2*ph);
+  let rx=5,ry=5;if(a){if(h<.07){rx=7;ry=3.6}else if(sp>.6){rx=4.2;ry=6}}
+  blob(B,16,26,rx,ry,h*15,false)}},
+{cat:'motion',ko:'예비 동작',en:'Anticipation',b:'바로 점프',a:'움츠렸다 점프',anim:true,
+ d:'큰 동작 직전에 반대 방향으로 살짝 움츠리는 동작입니다. 보는 사람이 다음 움직임을 미리 읽을 수 있고, 동작에 힘이 실립니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,26);const ph=(s/2)%1,jump=u=>Math.sin(u*Math.PI)*10;let rx=5,ry=6,lift=0;
+  if(!a){if(ph>.4&&ph<.7)lift=jump((ph-.4)/.3)}
+  else if(ph>.22&&ph<.4){const k=Math.min(1,(ph-.22)/.1);rx=5+1.6*k;ry=6-2.2*k}
+  else if(ph>=.4&&ph<.7){const u=(ph-.4)/.3;lift=jump(u);if(u<.5){rx=4.4;ry=6.8}}
+  else if(ph>=.7&&ph<.76){rx=6.4;ry=4.4}
+  blob(B,16,26,rx,ry,lift)}},
+{cat:'motion',ko:'팔로 스루, 오버래핑 액션',en:'Follow-through / Overlapping Action',b:'함께 멈춤',a:'늦게 따라옴',anim:true,
+ d:'몸이 멈춘 뒤에도 머리카락, 깃털, 망토처럼 매달린 부분이 조금 늦게 따라오다 멈추는 표현입니다. 부위마다 움직이는 시점을 어긋나게 하면 무게감이 생깁니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,25);
+  const e=v=>v*v*(3-2*v),P=u=>{u=wrap(u);if(u<.3)return 7+e(u/.3)*18;if(u<.5)return 25;if(u<.8)return 25-e((u-.5)/.3)*18;return 7};
+  const ph=(s/2.6)%1,x=P(ph),cy=blob(B,x,25,5,6);
+  for(let i=0;i<5;i++){const off=a?(P(ph-.025*(i+1))-x)*.5:0;B.set(Math.round(x+off),Math.round(cy-6-i),hex('#c2473a'))}}},
+{cat:'motion',ko:'스미어 프레임',en:'Smear Frame',b:'순간 이동처럼 보임',a:'스미어',anim:true,
+ d:'아주 빠른 동작의 중간 프레임에 물체를 길게 늘여 그려 궤적을 보여 주는 기법입니다. 프레임 수가 적은 픽셀 애니메이션에서 특히 효과가 큽니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,25);const ph=(s/1.6)%1,mid=(ph>=.35&&ph<.45)?1:(ph>=.85&&ph<.95)?-1:0;
+  if(!mid){blob(B,(ph>=.45&&ph<.85)?25:7,25,4.5,4.5,0,false);return}
+  if(!a){blob(B,16,25,4.5,4.5,0,false);return}
+  const lead=16+mid*4,tail=16-mid*9;
+  for(let x=Math.min(lead,tail);x<=Math.max(lead,tail);x++){const k=Math.abs(x-tail)/Math.abs(lead-tail),hh=Math.round(.5+k*3.5);for(let y=21-hh;y<21+hh;y++)B.set(x,y,k<.5?BALL[3]:BALL[2])}
+  blob(B,lead,25,4.5,4.5,0,false)}},
+{cat:'motion',ko:'아이들 루프, 홀드 프레임',en:'Idle Loop / Hold Frame',b:'정지 화면',a:'숨 쉬기와 깜박임',anim:true,
+ d:'가만히 서 있는 동안 반복하는 작은 대기 동작입니다. 1픽셀 숨 쉬기와 가끔 하는 눈 깜박임만으로도 살아 있어 보입니다. 동작 사이에 포즈를 잠깐 멈춰 두는 프레임은 홀드 프레임이라고 합니다.',
+ t:'방치형 게임에서는 화면에 가장 오래 보이는 애니메이션이라 제일 공들여야 합니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,25);const up=a&&Math.sin(s*2.4)>0,blink=a&&(s%3.2)<.16;
+  const cy=blob(B,16,25,6,up?7.6:7,0,!blink);if(blink){B.set(14,Math.round(cy-1),BALL[1]);B.set(17,Math.round(cy-1),BALL[1])}}},
+
+{cat:'color',ko:'팔레트 제한',en:'Limited Palette',b:'무제한 색',a:'4색',
+ d:'쓸 색의 수를 미리 정해 두고 그 안에서만 그리는 방법입니다. 화면 전체 색감이 통일되고, 에셋끼리 섞어도 잘 어울립니다.',
+ draw(B,a){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<22?mix(hex('#6aa0c8'),hex('#f0c8a0'),y/21):mix(hex('#4a6070'),hex('#2a3448'),(y-22)/9));
+  sphere(B,15,14,8.5,n=>smooth(BALL,litT(n)));if(!a)return;const P=['#1b1f3a','#4a6a93','#e0a070','#f4e4c8'].map(hex);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=B.get(x,y);let best=P[0],bd=9;P.forEach(p=>{const d=(p[0]-c[0])**2+(p[1]-c[1])**2+(p[2]-c[2])**2;if(d<bd){bd=d;best=p}});B.set(x,y,best)}}},
+{cat:'color',ko:'팔레트 스왑',en:'Palette Swap',b:'원본',a:'스왑',
+ d:'같은 스프라이트에서 색만 바꿔 다른 캐릭터, 다른 등급, 다른 진영으로 쓰는 기법입니다. 그림 한 장으로 여러 변형을 만들 수 있습니다.',
+ t:'단계 수가 같은 램프끼리 바꿔야 명암이 깨지지 않습니다.',
+ draw(B,a){fill(B,PAPER);ground(B,28);const C=a?['#3a1420','#7a2a30','#c0503c','#f08a5a','#ffd8a8'].map(hex):BALL,
+  H=(a?['#3a3a4a','#6a6a80','#a0a0b8','#d0d0e0','#ffffff']:['#2a1620','#4e2a2a','#7a4632','#a8683e','#e0a865']).map(hex),SK=['#8a4a3e','#c98266','#f0b896','#ffe2cc'].map(hex);
+  ellipsoid(B,16,22,7,6,n=>quant(C,litT(n)));sphere(B,16,12,6,(n,x,y)=>y<11-(x%3===0?0:1)?quant(H,litT(n)):quant(SK,litT(n)));
+  B.set(14,13,INK);B.set(18,13,INK)}},
+{cat:'color',ko:'채도 대비, 시선 유도',en:'Saturation Focus',b:'모두 진함',a:'주인공만 진함',
+ d:'중요한 것만 채도를 높이고 나머지는 낮춰서 눈이 먼저 가게 하는 방법입니다. 화면에 진한 색이 많을수록 어느 것도 눈에 띄지 않습니다.',
+ draw(B,a){fill(B,hex('#8a8790'));ground(B,23);const R=[['#4a1020','#9a2030','#e04040','#ff9080'],['#103a20','#20702a','#40c040','#a0f090'],['#3a2a08','#8a6010','#e0a820','#fff0a0']].map(r=>r.map(hex));
+  [[6,0],[26,1],[16,2]].forEach(([cx,i])=>sphere(B,cx,17,5,n=>{let c=quant(R[i],litT(n));if(a&&i<2){const v=lum(c);c=mix(c,[v,v,v],.8)}return c}))}},
+{cat:'color',ko:'앰비언트 컬러, 환경광 색',en:'Ambient Color',b:'회색 그림자',a:'하늘색과 풀색',
+ d:'그림자 속에도 주변 환경의 색이 스며듭니다. 위를 향한 그림자는 하늘색을, 아래를 향한 그림자는 바닥색을 받습니다.',
+ t:'그림자를 검정이나 회색으로만 칠하면 물체가 장면에서 떠 보입니다.',
+ draw(B,a){const SKY=hex('#7ab4e0'),G=hex('#5a9a3a');for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<23?mix(SKY,hex('#cfe6f2'),y/22):G);
+  const W=['#55555e','#85858e','#b5b5bc','#e0e0e4','#ffffff'].map(hex);for(let x=10;x<=24;x++)B.set(x,24,mul(G,.7));
+  sphere(B,16,15,9,n=>{let c=quant(W,litT(n));if(a&&dot(n,L)<.15)c=n[1]>.25?mix(c,G,.4):mix(c,SKY,.35);return c})}},
+
+{cat:'pixel',ko:'클린 라인, 픽셀 기울기',en:'Clean Pixel Lines',b:'임의 기울기',a:'정수비 기울기',
+ d:'픽셀 선은 3:1, 2:1, 1:1처럼 계단 길이가 일정한 기울기일 때 가장 깨끗합니다. 2:1은 아이소메트릭 픽셀아트의 기본 각도입니다.',
+ draw(B,a){fill(B,PAPER);if(a){stairs(B,2,3,Array(9).fill(3),INK);stairs(B,2,12,Array(14).fill(2),INK);stairs(B,2,17,Array(13).fill(1),INK)}
+  else{line(B,2,3,29,13,INK);line(B,2,12,29,25,INK);line(B,2,17,17,29,INK)}}},
+{cat:'pixel',ko:'광원 일관성',en:'Light Source Consistency',b:'광원이 제각각',a:'광원 통일',
+ d:'한 화면 안의 모든 물체는 같은 방향에서 빛을 받아야 합니다. 에셋을 따로 만들어 모으면 가장 자주 깨지는 부분입니다.',
+ draw(B,a){floorWall(B,PAPER,hex('#cfc8b8'),21);const L2=norm([.55,-.65,.52]);
+  const sh=(cx,dir)=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx-dir*3)/6.5,dy=(y+.5-23)/1.8;if(dx*dx+dy*dy<=1)darken(B,x,y,.7)}};
+  sh(9,1);sh(23,a?1:-1);sphere(B,9,15,6,n=>quant(BALL,litT(n)));sphere(B,23,15,6,n=>quant(BALL,litWith(n,a?L:L2)))}},
+{cat:'pixel',ko:'디테일 밀도',en:'Detail Density',b:'어디나 같은 밀도',a:'초점에 집중',
+ d:'시선이 머물 곳에만 디테일을 모으고 나머지는 단순하게 두는 원칙입니다. 모든 곳이 자세하면 오히려 아무것도 눈에 들어오지 않습니다.',
+ draw(B,a){bricks(B,false,true);const F=Buf();bricks(F,false,false);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const near=Math.hypot(x-16,y-14)<9;if(!a||near){if(hash(x,y)>.9)darken(B,x,y,.6)}else B.set(x,y,mix(mul(F.get(x,y),.85),hex('#5a3a34'),.3))}
+  for(let y=10;y<=18;y++)for(let x=10;x<=21;x++){const e=x===10||x===21||y===10||y===18;B.set(x,y,e?hex('#3a2418'):hex('#d8a868'))}
+  [[12,13],[13,13],[12,14],[12,15],[13,15],[15,13],[15,14],[15,15],[17,13],[18,13],[18,14],[17,15],[19,15]].forEach(([x,y])=>B.set(x,y,hex('#3a2418')))}},
+{cat:'pixel',ko:'믹셀, 스케일 일관성',en:'Mixels / Scale Consistency',b:'크기 섞임',a:'통일',
+ d:'한 화면에 픽셀 크기가 다른 그림이 섞인 상태를 믹셀이라고 부릅니다. 확대 배율과 외곽선 두께가 오브젝트마다 다르면 화면이 조각조각 붙인 것처럼 보입니다.',
+ t:'AI로 만든 에셋이나 크기를 조절한 그림을 섞어 쓸 때 자주 생깁니다. 모든 에셋을 같은 배율에서 다시 다듬어야 합니다.',
+ draw(B,a){fill(B,PAPER);ground(B,26);crate(B,3,16,12,25,1);crate(B,16,12,29,25,a?1:2)}},
+
+{cat:'fx',ko:'스크린 셰이크',en:'Screen Shake',b:'없음',a:'셰이크',anim:true,ref:true,
+ d:'충격이 있을 때 화면 전체를 짧게 흔드는 연출입니다. 세게, 짧게, 빠르게 줄어들게 해야 멀미가 나지 않습니다.',
+ draw(B,a,f,s=0){const T=Buf();tavern(T);const ph=(s/2)%1,cy=ph<.6?20:Math.round(-8+((ph-.6)/.4)**2*28);crate(T,13,cy-7,20,cy,1);
+  let dx=0,dy=0;if(a&&ph<.25){const k=1-ph/.25;dx=Math.round(Math.sin(s*70)*2*k);dy=Math.round(Math.cos(s*53)*2*k)}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,T.get(Math.min(N-1,Math.max(0,x+dx)),Math.min(N-1,Math.max(0,y+dy))))}},
+{cat:'fx',ko:'히트 스톱',en:'Hit Stop',b:'그대로 튕김',a:'멈칫',anim:true,ref:true,
+ d:'부딪히는 순간 몇 프레임 동안 화면을 멈춰 충격을 강조하는 연출입니다. 번쩍임을 함께 넣으면 더 세게 느껴집니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,25);const ph=(s/1.6)%1;let u=ph,flash=false;
+  if(a){if(ph<.42)u=ph/.42*.5;else if(ph<.56){u=.5;flash=ph<.49}else u=.5+(ph-.56)/.44*.5}
+  const lin=u<.5?u*2:2-u*2,cx=6+lin*15.5;for(let y=8;y<25;y++)for(let x=26;x<N;x++)B.set(x,y,flash?hex('#ffffff'):hex('#6e4528'));
+  if(flash)ellipsoid(B,cx,20.5,4.5,4.5,()=>hex('#ffffff'));else blob(B,cx,25,4.5,4.5,0,false)}},
+{cat:'fx',ko:'파티클',en:'Particles',b:'없음',a:'불티',anim:true,
+ d:'불티, 먼지, 연기처럼 작은 점 여러 개를 띄워 움직임과 공기를 더하는 효과입니다. 방치형 게임에서는 적은 작업으로 멈춘 화면을 살아 있게 만들 수 있습니다.',
+ draw(B,a,f,s=0){floorWall(B,DARK,hex('#221a24'),24);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x-16,y-21);if(d<10)B.set(x,y,mix(B.get(x,y),hex('#ff8a3a'),d<5?.22:.1))}
+  for(let x=10;x<=22;x++){B.set(x,24,hex('#5a3820'));B.set(x,25,hex('#3a2418'))}
+  [[15,23],[16,23],[17,23],[14,23],[18,23],[15,22],[16,22],[17,22],[16,21],[15,21],[16,20]].forEach(([x,y],i)=>B.set(x,y,i<5?hex('#ff7030'):i<9?hex('#ffb040'):hex('#fff0b0')));
+  if(!a)return;for(let i=0;i<14;i++){const p=wrap(s*(.25+hash(i,1)*.35)+hash(i,3)),x=Math.round(13+hash(i,2)*7+Math.sin(s*3+i)*1.5*p),y=Math.round(20-p*19);
+   if(p<.9)B.set(x,y,mix(hex('#fff0a0'),hex('#ff5020'),p))}}},
+{cat:'fx',ko:'플로팅 텍스트',en:'Floating Text',b:'숫자만 바뀜',a:'떠오르는 숫자',anim:true,
+ d:'수익이나 경험치를 얻은 자리에서 숫자가 톡 튀어나와 위로 떠오르며 사라지는 연출입니다. 어디서 무엇을 얻었는지 바로 보여서 방치형 게임에서 가장 많이 씁니다.',
+ draw(B,a,f,s=0){tavern(B);const ph=(s/1.5)%1,n=Math.floor(s/1.5);blob(B,16,27,4,5);text(B,String(120+n*5),2,2,hex('#ffe08a'));
+  if(a&&ph<.8){const p=ph/.8;text(B,'+5',12,Math.round(15-p*8),hex('#ffe08a'),p<.6?1:1-(p-.6)/.4)}}},
+{cat:'fx',ko:'보상 날아가기',en:'Collect Fly',b:'바로 사라짐',a:'재화 칸으로 날아감',anim:true,
+ d:'얻은 코인이나 아이템이 화면 위 재화 칸까지 줄지어 날아가 들어가는 연출입니다. 보상이 어디에 쌓이는지 눈으로 따라가게 해 줍니다.',
+ t:'하나씩 시간차를 두고 곡선으로 날리면 훨씬 풍성해 보입니다.',
+ draw(B,a,f,s=0){tavern(B);const ph=(s/2.4)%1,n=Math.floor(s/2.4);coin(B,2,2);let got=false;
+  if(!a){if(ph<.3)coin(B,14,19);else got=true}
+  else{let done=0;for(let i=0;i<5;i++){const st=.1+i*.06,t=(ph-st)/.35;if(t<0)coin(B,11+i*2,19+(i%2));else if(t<1){const e=t*t;coin(B,Math.round(11+i*2+(2-11-i*2)*e),Math.round(19+(2-19)*e-Math.sin(t*Math.PI)*5))}else done++}got=done===5}
+  text(B,String(40+n*5+(got?5:0)),8,2,hex('#ffe08a'))}},
+{cat:'fx',ko:'팝 인, 오버슈트',en:'Pop In / Overshoot',b:'그냥 나타남',a:'튀어나옴',anim:true,
+ d:'창이나 아이콘이 등장할 때 목표보다 살짝 크게 튀어나왔다가 제자리로 돌아오는 방식입니다. 짧지만 화면에 탄력이 생깁니다.',
+ draw(B,a,f,s=0){tavern(B);const ph=(s/2.2)%1;if(ph<.12||ph>.85)return;const t=Math.min(1,(ph-.12)/.12),c1=1.70158;
+  const k=a?1+(c1+1)*(t-1)**3+c1*(t-1)**2:1;panel(B,16,15,22*k,15*k)}},
+{cat:'fx',ko:'펄스 하이라이트',en:'Pulse Highlight',b:'정지된 표시',a:'숨 쉬는 표시',anim:true,
+ d:'알림이 있는 캐릭터나 버튼이 은은하게 빛나며 커졌다 작아지기를 반복하는 연출입니다. 화면을 어지럽히지 않으면서 할 일이 있다는 걸 알려 줍니다.',
+ draw(B,a,f,s=0){tavern(B);blob(B,9,27,4,5);blob(B,23,27,4,5);
+  if(a){const r=6.5+Math.sin(s*3)*.8;for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.abs(Math.hypot(x+.5-23,y+.5-22)-r)<.6)B.set(x,y,mix(B.get(x,y),hex('#ffe08a'),.5+.3*Math.sin(s*3)))}
+  text(B,'!',22,10+(a?Math.round(Math.sin(s*4)):0),hex('#ffe08a'))}},
+{cat:'fx',ko:'선택 아웃라인',en:'Selection Outline',b:'표시 없음',a:'밝은 테두리',anim:true,
+ d:'마우스를 올리거나 선택한 대상에 밝은 테두리를 둘러 지금 무엇을 고른 상태인지 보여 주는 것입니다.',
+ t:'스프라이트 바깥 1픽셀에 그리면 원래 그림을 건드리지 않습니다.',
+ draw(B,a,f,s=0){tavern(B);[[7,0],[16,1],[25,0]].forEach(([cx,sel])=>{if(a&&sel){const c=Math.sin(s*5)>-.3?hex('#fff6b0'):hex('#ffd040');
+   for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(!inEll(x,y,cx,22,4,5)&&(inEll(x+1,y,cx,22,4,5)||inEll(x-1,y,cx,22,4,5)||inEll(x,y+1,cx,22,4,5)||inEll(x,y-1,cx,22,4,5)))B.set(x,y,c)}
+   blob(B,cx,27,4,5)})}},
+{cat:'fx',ko:'딤, 배경 어둡게',en:'Dim',b:'딤 없음',a:'딤',
+ d:'창이 열리면 뒤 화면을 어둡게 눌러서 시선을 창으로 모으는 것입니다. 지금은 창을 다룰 차례라는 신호도 됩니다.',
+ draw(B,a){tavern(B);blob(B,8,27,4,5);if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++)darken(B,x,y,.4);panel(B,18,15,20,16)}},
+{cat:'fx',ko:'스포트라이트',en:'Spotlight',b:'없음',a:'한 곳만 밝게',anim:true,
+ d:'튜토리얼이나 이벤트에서 봐야 할 곳 하나만 동그랗게 밝히고 나머지를 어둡게 하는 연출입니다.',
+ draw(B,a,f,s=0){tavern(B);blob(B,8,27,4,5);blob(B,24,27,4,5);if(!a)return;const r=7+Math.sin(s*2.5)*.6;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x+.5-24,y+.5-22);if(d>r+1)darken(B,x,y,.28);else if(d>r)B.set(x,y,mix(B.get(x,y),hex('#ffe08a'),.35))}}},
+{cat:'fx',ko:'화이트 플래시',en:'White Flash',b:'그냥 바뀜',a:'번쩍',anim:true,
+ d:'레어 획득이나 등급 상승처럼 특별한 순간에 화면을 한 번 하얗게 번쩍이는 연출입니다. 바뀌는 순간을 가려 주는 역할도 합니다.',
+ t:'너무 자주 쓰거나 너무 밝으면 눈이 아픕니다. 정말 특별한 순간에만 씁니다.',
+ draw(B,a,f,s=0){floorWall(B,DARK,hex('#221a24'),26);const ph=(s/2.6)%1,gold=ph>=.45,G=['#3a2a08','#8a6010','#e0a820','#ffe070','#fff8d0'].map(hex);
+  ellipsoid(B,16,20,5,6,n=>quant(gold?G:BALL,litT(n)));B.set(14,19,INK);B.set(17,19,INK);
+  if(a&&ph>=.45&&ph<.62){const k=(1-(ph-.45)/.17)**2;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(B.get(x,y),[1,1,1],k))}
+  if(a&&ph>=.55&&ph<.9)for(let i=0;i<6;i++){const an=i*1.05+s,r=8+(ph-.55)*20;B.set(Math.round(16+Math.cos(an)*r),Math.round(20+Math.sin(an)*r*.8),hex('#fff6b0'))}}},
+{cat:'fx',ko:'디졸브',en:'Dissolve',b:'툭 나타남',a:'흩어지며 나타남',anim:true,
+ d:'캐릭터가 나타나거나 사라질 때 픽셀이 하나둘 채워지거나 흩어지는 전환입니다. 순간 이동이나 소환처럼 보이게 할 수 있습니다.',
+ draw(B,a,f,s=0){tavern(B);const ph=(s/3)%1,p=ph<.3?ph/.3:ph<.6?1:ph<.9?1-(ph-.6)/.3:0;
+  ellipsoid(B,16,21,5,6,(n,x,y)=>{const h=hash(x,y);if(a){if(h>p)return null;if(p<1&&p-h<.12)return hex('#c4f0ff')}else if(p<.5)return null;return quant(BALL,litT(n))})}},
+{cat:'fx',ko:'시간대와 날씨 오버레이',en:'Time of Day / Weather Overlay',b:'낮',a:'비 오는 밤',anim:true,
+ d:'그림은 그대로 두고 화면 위에 색감과 날씨 층을 덧씌워 분위기를 바꾸는 것입니다. 밤은 푸르고 어둡게 누르고, 비나 눈은 파티클로 얹습니다.',
+ draw(B,a,f,s=0){const SK=hex('#b8d4e0'),base=hex('#2a3448');for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(hex('#8ab8d0'),SK,y/31));
+  [[12,3.2,.9,.62],[17,4.5,1.7,.36],[23,2.6,1.1,0]].forEach(([h,fr,amp,fog],li)=>{const c=mix(base,SK,fog);for(let x=0;x<N;x++){const top=h+Math.sin(x/fr+li*2)*amp*2;for(let y=Math.ceil(top);y<N;y++)B.set(x,y,c)}});
+  if(!a)return;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=B.get(x,y);B.set(x,y,[c[0]*.35,c[1]*.42,c[2]*.7])}
+  for(let i=0;i<18;i++){const x0=Math.floor(hash(i,7)*36),y0=Math.floor((s*28*(.8+hash(i,8)*.4)+hash(i,9)*40)%40)-4;for(let k=0;k<3;k++){const px=x0-Math.floor((y0+k)/3),py=y0+k;if(px>=0&&py>=0&&px<N&&py<N)B.set(px,py,mix(B.get(px,py),hex('#a8c8e8'),.6))}}}},
+{cat:'fx',ko:'슬로 모션',en:'Slow Motion',b:'일정한 시간',a:'충돌 직전 느려짐',anim:true,ref:true,
+ d:'중요한 순간에 시간을 잠깐 느리게 흘려서 그 장면을 강조하는 연출입니다. 방치형 게임에서는 쓸 곳이 많지 않습니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,26);const ph=(s/2)%1,tt=!a?ph:ph<.4?ph/.4*.45:ph<.7?.45+(ph-.4)/.3*.1:.55+(ph-.7)/.3*.45;
+  const h=tt<.5?18*(1-(tt/.5)**2):18*(1-(1-(tt-.5)/.5)**2);blob(B,16,26,4.5,4.5,h,false)}},
+
+{cat:'camera',ko:'픽셀 퍼펙트 카메라',en:'Pixel-perfect Camera',b:'떨림',a:'정수 스냅',anim:true,
+ d:'카메라 위치를 정수 픽셀에 맞추고, 배경과 캐릭터를 같은 기준으로 반올림하는 것입니다. 기준이 어긋나면 카메라가 따라갈 때 캐릭터가 배경 위에서 1픽셀씩 떨립니다.',
+ t:'픽셀아트 게임에서 가장 먼저 챙겨야 하는 카메라 설정입니다.',
+ draw(B,a,f,s=0){const X=20+(s*3.7)%56,cam=X-14.4+Math.sin(s*1.7)*.8;
+  if(a){const c=Math.round(cam);view(B,c);blob(B,Math.round(X)-c,27,3.5,4.5)}else{view(B,Math.floor(cam));blob(B,Math.round(X-cam),27,3.5,4.5)}}},
+{cat:'camera',ko:'정수 배율 확대',en:'Integer Scaling',b:'1.5배',a:'2배',
+ d:'픽셀아트를 키울 때 2배, 3배처럼 정수로만 키우는 것입니다. 1.5배처럼 키우면 어떤 픽셀은 1칸, 어떤 픽셀은 2칸이 되어 굵기가 들쭉날쭉해집니다.',
+ t:'화면 해상도가 정수로 나누어떨어지지 않으면 남는 부분을 테두리로 채우는 편이 낫습니다.',
+ draw(B,a){view(B,2,4,a?2:1.5)}},
+{cat:'camera',ko:'카메라 스무딩, 러프',en:'Camera Smoothing (Lerp)',b:'순간 이동',a:'부드럽게 따라감',anim:true,
+ d:'카메라가 목표 위치로 바로 가지 않고 남은 거리의 일정 비율씩 다가가는 방식입니다. 처음엔 빠르고 도착할 때쯤 천천히 멈춥니다.',
+ draw(B,a,f,s=0){const k=Math.floor(s/3),t=s-k*3,to=k%2?52:4,from=k%2?4:52;view(B,Math.round(a?from+(to-from)*(1-Math.exp(-t*3.2)):to))}},
+{cat:'camera',ko:'팬과 경계 제한',en:'Pan & Camera Bounds',b:'경계 없음',a:'경계와 튕김',anim:true,
+ d:'화면을 좌우로 넘겨 볼 때 세계의 끝에서 카메라를 멈추는 것입니다. 끝에서 살짝 더 밀렸다가 돌아오게 하면 끝에 닿았다는 느낌이 납니다.',
+ draw(B,a,f,s=0){const want=32+46*Math.sin(s*.9);let cam=want;if(a){if(want<0)cam=want*.25;else if(want>64)cam=64+(want-64)*.25}view(B,Math.round(cam))}},
+{cat:'camera',ko:'데드존',en:'Dead Zone',b:'항상 중앙 고정',a:'데드존',anim:true,
+ d:'대상이 화면 가운데의 일정 영역 안에서 움직일 때는 카메라를 가만히 두는 방식입니다. 작은 움직임마다 배경이 흔들리지 않습니다.',
+ t:'점선 사이가 데드존입니다. 캐릭터가 이 선을 넘을 때만 카메라가 따라갑니다.',
+ draw(B,a,f,s=0){const X=48+18*Math.sin(s*.7)+5*Math.sin(s*2.3);let cam=X-16;
+  if(a){const st=this.st||(this.st={cam:X-16});if(X-st.cam<10)st.cam=X-10;if(X-st.cam>22)st.cam=X-22;cam=st.cam}
+  const c=Math.round(cam);view(B,c);if(a)for(let y=2;y<30;y+=3){B.set(10,y,hex('#ffffff'));B.set(22,y,hex('#ffffff'))}
+  blob(B,Math.round(X)-c,27,3.5,4.5)}},
+{cat:'camera',ko:'룩어헤드',en:'Look-ahead',b:'중앙 고정',a:'앞쪽을 더 보여 줌',anim:true,ref:true,
+ d:'대상이 움직이는 방향 쪽 화면을 더 넓게 보여 주는 방식입니다. 가는 길 앞에 무엇이 있는지 미리 보입니다. 직접 조작하는 게임에서 주로 씁니다.',
+ draw(B,a,f,s=0){const e=v=>v*v*(3-2*v),P=u=>{u=wrap(u);if(u<.4)return 16+e(u/.4)*64;if(u<.5)return 80;if(u<.9)return 80-e((u-.5)/.4)*64;return 16};
+  const ph=(s/7)%1,X=P(ph),v=P(ph+.01)-P(ph-.01);let cam=X-16;
+  if(a){const st=this.st||(this.st={o:0});st.o+=((Math.abs(v)>.05?Math.sign(v)*8:0)-st.o)*.05;cam+=st.o}
+  const c=Math.round(Math.max(0,Math.min(64,cam)));view(B,c);blob(B,Math.round(X)-c,27,3.5,4.5)}},
+{cat:'camera',ko:'카메라 흔들림, 핸드헬드',en:'Camera Sway',b:'고정',a:'느린 흔들림',anim:true,ref:true,
+ d:'손으로 든 카메라처럼 화면이 아주 느리고 작게 떠다니게 하는 연출입니다. 멈춘 장면이 덜 심심해지지만, 픽셀아트에서는 1픽셀 움직임도 크게 보여서 조심해야 합니다.',
+ draw(B,a,f,s=0){view(B,a?Math.round(30+Math.sin(s*.6)*1.4):30,a?Math.max(0,Math.round(.5+Math.sin(s*.9+1)*.9)):0)}},
+{cat:'camera',ko:'줌 인, 푸시 인',en:'Zoom In / Push In',b:'일정 속도',a:'가감속',anim:true,
+ d:'중요한 대상을 향해 화면을 확대하며 다가가는 연출입니다. 이징을 넣어야 자연스럽고, 픽셀아트에서는 끝 배율을 정수로 맞춰야 깨끗하게 멈춥니다.',
+ draw(B,a,f,s=0){const ph=(s/3)%1,u=ph<.4?ph/.4:ph<.6?1:ph<.9?1-(ph-.6)/.3:0,k=a?u*u*(3-2*u):u,z=1+k;view(B,22-14/z,10-10/z,z)}},
+{cat:'camera',ko:'레터박스',en:'Letterbox',b:'일반 화면',a:'시네마틱 바',
+ d:'화면 위아래에 검은 띠를 넣어 영화 같은 장면으로 바꾸는 연출입니다. 스토리 장면이 시작됐다는 신호로 씁니다.',
+ draw(B,a){view(B,10);if(a)for(let y=0;y<N;y++)if(y<4||y>=28)for(let x=0;x<N;x++)B.set(x,y,hex('#000000'))}},
+{cat:'camera',ko:'화면 전환, 컷과 와이프',en:'Cut / Iris Wipe',b:'하드 컷',a:'아이리스 와이프',anim:true,
+ d:'장면을 바꿀 때 바로 잘라 넘기거나, 원이 좁혀졌다 열리는 것 같은 전환을 넣는 것입니다. 전환을 넣으면 장소가 바뀐 걸 바로 알 수 있습니다.',
+ draw(B,a,f,s=0){const ph=(s/3)%2;view(B,ph<1?4:52);if(!a)return;const p=ph%1,r=p>.8?(1-(p-.8)/.2)*24:p<.2?(p/.2)*24:99;
+  if(r<24)for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-16,y+.5-16)>r)B.set(x,y,hex('#000000'))}},
+{cat:'camera',ko:'서브픽셀 카메라, 스무스 카메라',en:'Sub-pixel Camera',b:'픽셀 단위로 끊김',a:'부드럽게 이동',anim:true,
+ d:'그림은 저해상도지만 카메라는 소수점 위치로 움직여서, 화면이 원본 픽셀 한 칸보다 잘게 미끄러지는 방식입니다. 느린 팬에서 차이가 가장 크게 납니다.',
+ t:'픽셀 퍼펙트 카메라와 반대 방식입니다. 저해상도 느낌을 지키고 싶으면 픽셀 퍼펙트, 움직임을 매끄럽게 하고 싶으면 서브픽셀을 고릅니다.',
+ paint(cv,a,s){const O=off(),c=ctx2(cv),cam=32+30*Math.sin(s*.35);c.drawImage(O.world,-(a?Math.round(cam*4):Math.round(cam)*4),0,384,128)}},
+{cat:'camera',ko:'서브픽셀 무브먼트',en:'Sub-pixel Movement',b:'1픽셀씩 점프',a:'부드럽게 이동',anim:true,
+ d:'캐릭터와 오브젝트를 소수점 좌표로 움직이고, 화면에도 그 위치 그대로 그리는 것입니다. 느리게 걷는 캐릭터도 미끄러지듯 움직입니다.',
+ paint(cv,a,s){const O=off(),c=ctx2(cv),X=6+16*(.5-.5*Math.cos(s*.5));c.drawImage(O.world,-80,0,384,128);c.drawImage(O.hero,a?Math.round(X*4):Math.round(X)*4,68,36,40)}},
+{cat:'camera',ko:'로우레스 렌더링, 하이레스 렌더링',en:'Low-res vs High-res Rendering',b:'로우레스',a:'하이레스',anim:true,
+ d:'로우레스는 저해상도 화면에 모든 것을 그린 뒤 통째로 키우는 방식이라 회전, 이동, 확대가 모두 픽셀 단위로 끊깁니다. 하이레스는 스프라이트를 키운 상태로 고해상도 화면에 그려서 움직임이 매끄럽습니다.',
+ t:'오른쪽은 흔들려도 원본 픽셀 모양이 그대로이고, 왼쪽은 각도가 바뀔 때마다 픽셀이 다시 찍혀 모양이 일그러집니다.',
+ paint(cv,a,s){const O=off(),ang=Math.sin(s*1.6)*.45;
+  const scene=(c,k)=>{c.drawImage(O.world,-24*k,0,96*k,32*k);c.save();c.translate(16*k,3*k);c.rotate(ang);c.drawImage(O.sign,-5*k,0,10*k,14*k);c.restore()};
+  if(a){scene(ctx2(cv),4);return}const lo=this.lo||(this.lo=Object.assign(document.createElement('canvas'),{width:32,height:32}));scene(ctx2(lo),1);ctx2(cv).drawImage(lo,0,0,128,128)}},
+{cat:'camera',ko:'샤프 바이리니어, 픽셀아트 AA 필터',en:'Sharp Bilinear',b:'Nearest (지글거림)',a:'샤프 바이리니어',anim:true,
+ d:'정수가 아닌 배율이나 소수점 위치로 그릴 때 픽셀 경계 한 줄만 살짝 섞어 주는 필터입니다. Nearest로만 그리면 움직일 때 픽셀 굵기가 3칸과 4칸 사이를 오가며 지글거립니다.',
+ t:'먼저 정수 배율로 크게 키운 뒤 남은 배율만 부드럽게 줄이는 방식으로 구현합니다. 하이레스 렌더링이라면 꼭 넣는 게 좋습니다.',
+ paint(cv,a,s){const O=off(),c=ctx2(cv),k=3.5,cam=20+8*Math.sin(s*.3);c.fillStyle='#0a0a0e';c.fillRect(0,0,128,128);
+  if(a){c.imageSmoothingEnabled=true;c.drawImage(O.big,-cam*k,8,96*k,32*k)}else c.drawImage(O.world,-cam*k,8,96*k,32*k)}},
+
+{cat:'scale',ko:'최단입점, 최근접 이웃 보간',en:'Nearest Neighbor',b:'원본 16px',a:'최단입점 8배',
+ d:'확대할 때 화면의 각 픽셀이 가장 가까운 원본 픽셀의 색을 그대로 가져오는 방식입니다. 새 색이 생기지 않아 픽셀 모양이 그대로 유지됩니다. 픽셀아트 확대의 기본입니다. 포토샵 한국어판의 이미지 크기 메뉴에서는 "최단입점(경계 유지)"이라고 표시됩니다.',
+ t:'정수 배율일 때만 깨끗합니다. 비정수 배율에서는 픽셀 굵기가 들쭉날쭉해집니다.',
+ paint(cv,a){paint128(cv,a?nearest8:(x,y)=>(x>=56&&x<72&&y>=56&&y<72)?scol(x-56,y-56):PAPER)}},
+{cat:'scale',ko:'쌍선형 보간, 바이리니어',en:'Bilinear Interpolation',b:'최단입점',a:'쌍선형',
+ d:'주변 원본 픽셀 4개(2×2)의 색을 거리에 따라 섞어 새 색을 만드는 방식입니다. 사진은 부드럽게 확대되지만, 픽셀아트는 경계가 뭉개져 흐릿해집니다.',
+ t:'게임 엔진 텍스처 필터의 기본값인 경우가 많습니다. 픽셀아트가 흐릿하게 나오면 필터 설정부터 확인합니다.',
+ paint(cv,a){paint128(cv,a?bilinear8:nearest8)}},
+{cat:'scale',ko:'쌍입방 보간, 바이큐빅',en:'Bicubic Interpolation',b:'쌍선형',a:'쌍입방',
+ d:'주변 원본 픽셀 16개(4×4)를 곡선으로 섞는 방식입니다. 쌍선형보다 선명하지만, 경계 바깥에 밝고 어두운 테가 생기는 링잉 현상이 나타납니다.',
+ t:'포토샵의 기본 확대 방식입니다. 메뉴에는 "쌍입방(매끄러운 그레이디언트)"으로 나옵니다. 픽셀아트를 키울 때는 반드시 최단입점으로 바꿔야 합니다.',
+ paint(cv,a){paint128(cv,a?bicubic8:bilinear8)}},
+{cat:'scale',ko:'픽셀아트 전용 확대, Scale2x와 xBR',en:'Pixel-art Scalers (Scale2x, hqx, xBR)',b:'최단입점',a:'Scale2x 세 번',
+ d:'픽셀아트의 대각선과 곡선을 알아보고 계단을 메워 주는 확대 알고리즘입니다. Scale2x(EPX)는 새 색 없이 모양만 다듬고, hqx와 xBR은 색을 섞어 더 매끈하게 만듭니다.',
+ t:'레트로 에뮬레이터 필터로 유명합니다. 원래 의도한 모양과 달라질 수 있어서 본편 그래픽보다는 옵션 필터로 씁니다.',
+ paint(cv,a){paint128(cv,a?scaler8:nearest8)}},
+{cat:'scale',ko:'회전 깨짐과 RotSprite',en:'Rotation Artifacts / RotSprite',b:'그냥 회전',a:'RotSprite',anim:true,
+ d:'네모난 픽셀아트를 저해상도에서 그대로 회전하면 1픽셀 선이 끊기거나 두꺼워지고, 픽셀이 빠지거나 겹치며, 각도가 바뀔 때마다 모양이 지글거립니다. 90도의 배수만 안전하고 45도 근처가 가장 심합니다.',
+ t:'RotSprite는 Scale2x로 8배 키운 뒤 회전하고 다시 줄이는 방식이라 선이 덜 끊깁니다. 그래도 완벽하지 않아서 중요한 각도는 손으로 다시 찍는 경우가 많습니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);rotDraw(B,a,s*.5)}},
+{cat:'scale',ko:'하이레스 회전과 믹셀',en:'High-res Rotation / Mixels',b:'회전 전',a:'하이레스 회전',anim:true,
+ d:'하이레스 렌더링에서는 스프라이트를 키운 채로 회전하므로 모양은 깨지지 않습니다. 대신 기울어진 큰 픽셀이 배경의 픽셀 격자와 어긋나서 믹셀이 생깁니다.',
+ t:'흔들리는 간판처럼 작은 각도로 잠깐 움직이는 건 괜찮지만, 계속 도는 물체는 회전 프레임을 따로 그리는 편이 깔끔합니다.',
+ paint(cv,a,s=0){const O=off(),c=ctx2(cv);c.drawImage(O.world,-96,0,384,128);c.save();c.translate(64,60);if(a)c.rotate(s*.5);c.drawImage(crateCv(),-28,-28,56,56);c.restore()}}
+];
+
+function blit(cv,B){const ctx=cv.getContext('2d'),im=ctx.createImageData(N,N);for(let i=0;i<N*N;i++){for(let k=0;k<3;k++)im.data[i*4+k]=Math.round(cl(B.d[i*3+k])*255);im.data[i*4+3]=255}ctx.putImageData(im,0,0)}
+function render(cv,t,a,f=.5,s=0){if(t.paint)return t.paint(cv,a,s);const B=Buf();t.draw(B,a,f,s);blit(cv,B)}
+
+const nav=document.getElementById('nav'),main=document.getElementById('main'),anims=[];
+CATS.forEach(c=>{
+  const a=document.createElement('a');a.href='#'+c.id;a.textContent=c.name;nav.appendChild(a);
+  const sec=document.createElement('section');sec.id=c.id;
+  sec.innerHTML=`<h2>${c.name}<small>${c.en}</small></h2><div class="grid"></div>`;
+  const grid=sec.querySelector('.grid');
+  TERMS.filter(t=>t.cat===c.id).forEach(t=>{
+    const card=document.createElement('article');card.className='card';
+    card.innerHTML=`<h3>${t.ko}${t.ref?'<span class="badge">참고용</span>':''}<span class="en">${t.en}</span></h3>
+      <div class="pair"><figure><canvas width="${t.paint?128:32}" height="${t.paint?128:32}" role="img" aria-label="${t.ko} 적용 전"></canvas><figcaption><b>BEFORE</b>${t.b}</figcaption></figure>
+      <figure class="after"><canvas width="${t.paint?128:32}" height="${t.paint?128:32}" role="img" aria-label="${t.ko} 적용 후"></canvas><figcaption><b>AFTER</b>${t.a}</figcaption></figure></div>
+      <p>${t.d}</p>${t.t?`<p class="tip"><strong>픽셀아트에서는</strong> ${t.t}</p>`:''}`;
+    const [c0,c1]=card.querySelectorAll('canvas');render(c0,t,false);render(c1,t,true);
+    if(t.anim)anims.push([c0,c1,t]);
+    grid.appendChild(card)});
+  main.appendChild(sec)});
+
+if(anims.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const loop=ts=>{const f=.5-.5*Math.cos(ts/1800*Math.PI*2);anims.forEach(([c0,c1,t])=>{render(c0,t,false,f,ts/1000);render(c1,t,true,f,ts/1000)});requestAnimationFrame(loop)};
+  requestAnimationFrame(loop)}
+</script>
+</body>
+</html>
