@@ -200,7 +200,7 @@ const TERMS=[
   sphere(B,16,14.5,9.5,n=>{const l=dot(n,L);let c=quant(BALL,litT(n));if(a&&l<.05&&n[1]>.4)c=mix(BALL[1],F,.42);return c})}},
 {cat:'light',ko:'림 라이트, 역광 윤곽광',en:'Rim Light',b:'없음',a:'림 라이트',
  d:'뒤에서 오는 빛 때문에 실루엣 가장자리에 생기는 얇은 밝은 선입니다. 어두운 배경에서 물체를 떼어 보이게 합니다.',
- t:'어두운 주점 같은 화면에서 캐릭터 가독성을 크게 올려 줍니다.',
+ t:'어두운 화면에서 캐릭터가 훨씬 잘 보이게 해 줍니다.',
  draw(B,a){fill(B,DARK);sphere(B,16,16,11,n=>{let c=quant(BALL,litT(n)*.55);if(a){const k=n[0]*.8-n[1]*.45;if(n[2]<.42&&k>.3)c=hex('#ffd28a');else if(n[2]<.6&&k>.45)c=mix(BALL[2],hex('#ffd28a'),.35)}return c})}},
 {cat:'light',ko:'GI, 전역 조명',en:'Global Illumination',b:'직접광만',a:'색 번짐',ref:true,
  d:'빛이 여러 번 튕기는 것까지 계산한 조명입니다. 빨간 벽 옆에 있는 흰 공과 바닥이 붉게 물드는 색 번짐이 그 예입니다.',
@@ -396,7 +396,7 @@ const TERMS=[
   blob(B,lead,25,4.5,4.5,0,false)}},
 {cat:'motion',ko:'아이들 루프, 홀드 프레임',en:'Idle Loop / Hold Frame',b:'정지 화면',a:'숨 쉬기와 깜박임',anim:true,
  d:'가만히 서 있는 동안 반복하는 작은 대기 동작입니다. 1픽셀 숨 쉬기와 가끔 하는 눈 깜박임만으로도 살아 있어 보입니다. 동작 사이에 포즈를 잠깐 멈춰 두는 프레임은 홀드 프레임이라고 합니다.',
- t:'방치형 게임에서는 화면에 가장 오래 보이는 애니메이션이라 제일 공들여야 합니다.',
+ t:'캐릭터가 화면에 가장 오래 보여 주는 애니메이션이라 제일 공들여야 합니다.',
  draw(B,a,f,s=0){fill(B,PAPER);ground(B,25);const up=a&&Math.sin(s*2.4)>0,blink=a&&(s%3.2)<.16;
   const cy=blob(B,16,25,6,up?7.6:7,0,!blink);if(blink){B.set(14,Math.round(cy-1),BALL[1]);B.set(17,Math.round(cy-1),BALL[1])}}},
 
@@ -455,7 +455,7 @@ const TERMS=[
   const lin=u<.5?u*2:2-u*2,cx=6+lin*15.5;for(let y=8;y<25;y++)for(let x=26;x<N;x++)B.set(x,y,flash?hex('#ffffff'):hex('#6e4528'));
   if(flash)ellipsoid(B,cx,20.5,4.5,4.5,()=>hex('#ffffff'));else blob(B,cx,25,4.5,4.5,0,false)}},
 {cat:'fx',ko:'파티클',en:'Particles',b:'없음',a:'불티',anim:true,
- d:'불티, 먼지, 연기처럼 작은 점 여러 개를 띄워 움직임과 공기를 더하는 효과입니다. 방치형 게임에서는 적은 작업으로 멈춘 화면을 살아 있게 만들 수 있습니다.',
+ d:'불티, 먼지, 연기처럼 작은 점 여러 개를 띄워 움직임과 공기를 더하는 효과입니다. 적은 작업으로 멈춘 화면을 살아 있게 만들 수 있습니다.',
  draw(B,a,f,s=0){floorWall(B,DARK,hex('#221a24'),24);
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x-16,y-21);if(d<10)B.set(x,y,mix(B.get(x,y),hex('#ff8a3a'),d<5?.22:.1))}
   for(let x=10;x<=22;x++){B.set(x,24,hex('#5a3820'));B.set(x,25,hex('#3a2418'))}
@@ -463,7 +463,7 @@ const TERMS=[
   if(!a)return;for(let i=0;i<14;i++){const p=wrap(s*(.25+hash(i,1)*.35)+hash(i,3)),x=Math.round(13+hash(i,2)*7+Math.sin(s*3+i)*1.5*p),y=Math.round(20-p*19);
    if(p<.9)B.set(x,y,mix(hex('#fff0a0'),hex('#ff5020'),p))}}},
 {cat:'fx',ko:'플로팅 텍스트',en:'Floating Text',b:'숫자만 바뀜',a:'떠오르는 숫자',anim:true,
- d:'수익이나 경험치를 얻은 자리에서 숫자가 톡 튀어나와 위로 떠오르며 사라지는 연출입니다. 어디서 무엇을 얻었는지 바로 보여서 방치형 게임에서 가장 많이 씁니다.',
+ d:'수익이나 경험치를 얻은 자리에서 숫자가 톡 튀어나와 위로 떠오르며 사라지는 연출입니다. 어디서 무엇을 얻었는지 바로 알 수 있습니다.',
  draw(B,a,f,s=0){tavern(B);const ph=(s/1.5)%1,n=Math.floor(s/1.5);blob(B,16,27,4,5);text(B,String(120+n*5),2,2,hex('#ffe08a'));
   if(a&&ph<.8){const p=ph/.8;text(B,'+5',12,Math.round(15-p*8),hex('#ffe08a'),p<.6?1:1-(p-.6)/.4)}}},
 {cat:'fx',ko:'보상 날아가기',en:'Collect Fly',b:'바로 사라짐',a:'재화 칸으로 날아감',anim:true,
@@ -513,7 +513,7 @@ const TERMS=[
   if(!a)return;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=B.get(x,y);B.set(x,y,[c[0]*.35,c[1]*.42,c[2]*.7])}
   for(let i=0;i<18;i++){const x0=Math.floor(hash(i,7)*36),y0=Math.floor((s*28*(.8+hash(i,8)*.4)+hash(i,9)*40)%40)-4;for(let k=0;k<3;k++){const px=x0-Math.floor((y0+k)/3),py=y0+k;if(px>=0&&py>=0&&px<N&&py<N)B.set(px,py,mix(B.get(px,py),hex('#a8c8e8'),.6))}}}},
 {cat:'fx',ko:'슬로 모션',en:'Slow Motion',b:'일정한 시간',a:'충돌 직전 느려짐',anim:true,ref:true,
- d:'중요한 순간에 시간을 잠깐 느리게 흘려서 그 장면을 강조하는 연출입니다. 방치형 게임에서는 쓸 곳이 많지 않습니다.',
+ d:'중요한 순간에 시간을 잠깐 느리게 흘려서 그 장면을 강조하는 연출입니다.',
  draw(B,a,f,s=0){fill(B,PAPER);ground(B,26);const ph=(s/2)%1,tt=!a?ph:ph<.4?ph/.4*.45:ph<.7?.45+(ph-.4)/.3*.1:.55+(ph-.7)/.3*.45;
   const h=tt<.5?18*(1-(tt/.5)**2):18*(1-(1-(tt-.5)/.5)**2);blob(B,16,26,4.5,4.5,h,false)}},
 
