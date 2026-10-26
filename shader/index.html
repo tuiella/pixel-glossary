@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>맵과 셰이더 용어집</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=DotGothic16&display=swap">
+<style>
+/* Layout: 좁은 헤더, 분류 칩, 카드마다 32x32 픽셀 장면 두 장을 나란히 */
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --fg:#1d2030; --muted:#5d6275; --line:#d5d9e2; --accent:#b8701f;
+  --display:"Do Hyeon","IBM Plex Sans KR",sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --pixel:"DotGothic16","IBM Plex Sans KR",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#13151b;--surface:#1c1f28;--fg:#e7e9f0;--muted:#9aa0b3;--line:#2d313d;--accent:#f0b45a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#13151b;--surface:#1c1f28;--fg:#e7e9f0;--muted:#9aa0b3;--line:#2d313d;--accent:#f0b45a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.65}
+body{word-break:keep-all;overflow-wrap:break-word}
+.wrap{max-width:1120px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header h1{font-family:var(--display);font-weight:400;font-size:clamp(32px,6vw,52px);line-height:1.1;margin:0 0 8px;text-wrap:balance}
+header p{color:var(--muted);margin:0;max-width:62ch}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 8px}
+nav a{font-size:13px;color:var(--fg);text-decoration:none;border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--surface)}
+nav a:hover,nav a:focus-visible{border-color:var(--accent);outline:none}
+h2{font-family:var(--display);font-weight:400;font-size:28px;margin:48px 0 16px;display:flex;align-items:baseline;gap:12px}
+h2 small{font-family:var(--pixel);font-size:13px;color:var(--muted);letter-spacing:.06em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.series{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}.series a{font-size:12px;padding:4px 10px;border-radius:4px;border:1px solid var(--line);color:var(--muted);text-decoration:none;background:var(--surface)}.series a:hover,.series a:focus-visible{border-color:var(--accent);color:var(--fg);outline:none}.series a[aria-current]{color:var(--fg);border-color:var(--accent);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h3{margin:0;font-size:18px;font-weight:600;line-height:1.3}
+.card h3 .en{display:block;font-family:var(--pixel);font-weight:400;font-size:12px;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+figure{margin:0;display:flex;flex-direction:column;gap:4px}
+canvas{width:100%;aspect-ratio:1;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:3px;display:block;max-width:100%}
+figcaption{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:baseline}
+figcaption b{font-family:var(--pixel);font-weight:400;font-size:11px;letter-spacing:.08em;color:var(--fg)}
+figure.after figcaption b{color:var(--accent)}
+.badge{font-size:11px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 8px;margin-left:8px;vertical-align:2px}
+.card p{margin:0;font-size:14px}
+.tip{font-size:13px;color:var(--muted)}
+.tip strong{color:var(--fg);font-weight:500}
+footer{margin-top:56px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+<nav class="series" aria-label="용어집 시리즈"><a href="https://tuiella.github.io/pixel-glossary/">1편 픽셀 셰이딩</a><a href="https://tuiella.github.io/pixel-glossary/color/">2편 색 표현</a><a href="https://tuiella.github.io/pixel-glossary/shader/" aria-current="page">3편 맵과 셰이더</a><a href="https://tuiella.github.io/pixel-glossary/anim/">4편 애니메이션과 리깅</a><a href="https://tuiella.github.io/pixel-glossary/production/">5편 게임 그래픽 실무</a></nav>
+  <h1>맵과 셰이더 용어집</h1>
+  <p>텍스처 맵과 셰이더 효과를 비교 장면으로 정리했습니다.</p>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<footer>모든 코드는 자바스크립트로 구현되어 있습니다.</footer>
+</div>
+
+<script>
+let N=32;
+const hex=(()=>{const m={};return h=>m[h]||(m[h]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255))})();
+const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const mul=(a,k)=>a.map(v=>v*k);
+const cl=v=>Math.max(0,Math.min(1,v));
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const norm=a=>{const l=Math.hypot(...a);return a.map(v=>v/l)};
+const quant=(r,t)=>r[Math.min(r.length-1,Math.max(0,Math.floor(t*r.length)))];
+const smooth=(r,t)=>{const s=cl(t)*(r.length-1),i=Math.min(r.length-2,Math.floor(s));return mix(r[i],r[i+1],s-i)};
+const L=norm([-.55,-.65,.52]);
+const litT=n=>cl((dot(n,L)+.3)/1.15);
+
+function Buf(){const n=N,d=new Float32Array(n*n*3);return{d,n,
+  set(x,y,c){if(x<0||y<0||x>=n||y>=n)return;const i=(y*n+x)*3;d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2]},
+  get(x,y){x=Math.min(n-1,Math.max(0,x));y=Math.min(n-1,Math.max(0,y));const i=(y*n+x)*3;return[d[i],d[i+1],d[i+2]]}}}
+function fill(B,c){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,c)}
+function floorWall(B,w,f,hy){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<hy?w:f)}
+function sphere(B,cx,cy,r,fn){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx)/r,dy=(y+.5-cy)/r,q=dx*dx+dy*dy;if(q<=1){const n=[dx,dy,Math.sqrt(1-q)];const c=fn(n,x,y,q);if(c)B.set(x,y,c)}}}
+function inSphere(x,y,cx,cy,r){const dx=(x+.5-cx)/r,dy=(y+.5-cy)/r;return dx*dx+dy*dy<=1}
+function darken(B,x,y,k){if(x<0||y<0||x>=N||y>=N)return;B.set(x,y,mul(B.get(x,y),k))}
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+
+const BALL=['#1b1f3a','#2c3f66','#3f6a93','#6ea3bf','#c4e6e6'].map(hex);
+const WALL=hex('#3b3550'),FLOOR=hex('#6b5442'),DARK=hex('#141019'),PAPER=hex('#e6e1d6'),INK=hex('#2b2540');
+
+function bricks(B,dark,shade){
+  const br=dark?hex('#4a2c30'):hex('#9a4f3c'),mo=dark?hex('#1e1418'):hex('#3c2a2a');
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const row=Math.floor(y/5),ly=y%5,ox=(row%2)*4,lx=(x+ox)%8;
+    let c=(ly===4||lx===7)?mo:br;
+    if(shade&&c===br){if(ly===0)c=hex('#c87055');else if(lx===0)c=hex('#b8604a');else if(ly===3)c=hex('#6e3328');else if(lx===6)c=hex('#7a392d')}
+    B.set(x,y,c)}}
+const hash=(x,y)=>{let n=Math.imul(x,374761393)+Math.imul(y,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296};
+const lum=c=>.299*c[0]+.587*c[1]+.114*c[2];
+function tavern(B){bricks(B,true,false);for(let y=20;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,(x+y)%6===0?hex('#4e3b30'):FLOOR);
+  for(let y=6;y<=13;y++)for(let x=12;x<=19;x++)B.set(x,y,(x===15||x===16||y===9)?hex('#3a2a2a'):hex('#e8c07a'));
+  for(let x=8;x<=23;x++){B.set(x,21,hex('#a87444'));B.set(x,22,hex('#6e4528'))}for(let y=23;y<=27;y++){B.set(9,y,hex('#5a3820'));B.set(22,y,hex('#5a3820'))}}
+function ellipsoid(B,cx,cy,rx,ry,fn){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,q=dx*dx+dy*dy;if(q<=1){const c=fn([dx,dy,Math.sqrt(1-q)],x,y);if(c)B.set(x,y,c)}}}
+function line(B,x0,y0,x1,y1,c){let dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,e=dx+dy;for(;;){B.set(x0,y0,c);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+function stairs(B,x,y,lens,c){for(const l of lens){for(let k=0;k<l;k++){B.set(x,y,c);x++}y++}}
+const litWith=(n,l)=>cl((dot(n,l)+.3)/1.15);
+const wrap=v=>((v%1)+1)%1;
+function ground(B,y){for(let yy=y;yy<N;yy++)for(let x=0;x<N;x++)B.set(x,yy,hex('#cfc8b8'))}
+function blob(B,cx,floor,rx,ry,lift=0,eyes=true){const cy=floor-ry-lift;ellipsoid(B,cx,cy,rx,ry,n=>quant(BALL,litT(n)));
+  if(eyes){B.set(Math.round(cx-2),Math.round(cy-1),INK);B.set(Math.round(cx+1),Math.round(cy-1),INK)}return cy}
+function crate(B,x0,y0,x1,y1,s){const w=Math.floor((x1-x0+1)/s),h=Math.floor((y1-y0+1)/s);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const lx=Math.floor((x-x0)/s),ly=Math.floor((y-y0)/s);if(lx>=w||ly>=h)continue;
+   let c=hex('#b07a46');if(lx===0||ly===0||lx===w-1||ly===h-1)c=hex('#4a2e1c');else if(ly===Math.floor(h/2)||Math.abs(lx-ly*(w/h))<.6)c=hex('#7a5030');B.set(x,y,c)}}
+// 카메라 항목용 가로 96px 주점. 0~47은 저녁 방, 48~95는 밤 방
+function wpix(x,y){if(x<0||x>=96||y<0||y>=N)return hex('#0a0a0e');const r=x%32,night=x>=48;
+  if(y>=22){if(r>=14&&r<=27&&y<=23)return hex(y===22?'#a87444':'#6e4528');if((r===15||r===26)&&y<=27)return hex('#5a3820');return(x+y)%6===0?hex('#4e3b30'):FLOOR}
+  if(r>=4&&r<=11&&y>=5&&y<=12)return(r===4||r===11||y===5||y===12||y===8)?hex('#3a2a2a'):hex(night?'#7ab4e0':'#e8c07a');
+  if(r>=21&&r<=23&&y>=8&&y<=11)return hex(r===22&&y>8&&y<11?'#fff6d8':'#ffc85a');
+  const row=Math.floor(y/5),ly=y%5,lx=(x+(row%2)*4)%8;let c=(ly===4||lx===7)?hex(night?'#14161e':'#1e1418'):hex(night?'#2c3048':'#4a2c30');
+  const d=Math.hypot(r-22,y-9.5);if(d<7)c=mix(c,hex('#ffb35a'),d<4?.35:.18);return c}
+// 하이레스 항목용: 저해상도 원본을 따로 만들어 128px 캔버스에 4배로 그린다
+let OFF=null;
+function off(){if(OFF)return OFF;
+  const mk=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),im=g.createImageData(w,h);
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){const v=fn(x,y);if(!v)continue;const i=(y*w+x)*4;im.data[i]=v[0]*255;im.data[i+1]=v[1]*255;im.data[i+2]=v[2]*255;im.data[i+3]=255}
+   g.putImageData(im,0,0);return c};
+  const world=mk(96,32,wpix);
+  const hero=mk(9,10,(x,y)=>{if(y===4&&(x===3||x===6))return INK;const dx=(x+.5-4.5)/4.5,dy=(y+.5-5)/5,q=dx*dx+dy*dy;return q<=1?quant(BALL,litT([dx,dy,Math.sqrt(1-q)])):null});
+  const sign=mk(10,14,(x,y)=>{if(y<4)return(x===4||x===5)?hex('#2a1c1c'):null;if(x===0||x===9||y===4||y===13)return hex('#2a1c1c');return(y>6&&y<11&&x>2&&x<7)?hex('#fff3cc'):hex('#ffc85a')});
+  const big=document.createElement('canvas');big.width=384;big.height=128;const bg=big.getContext('2d');bg.imageSmoothingEnabled=false;bg.drawImage(world,0,0,384,128);
+  return OFF={world,hero,sign,big}}
+function ctx2(cv){const c=cv.getContext('2d');c.setTransform(1,0,0,1,0,0);c.imageSmoothingEnabled=false;return c}
+// 확대와 회전 항목용: 색 번호 배열 스프라이트와 보간 함수
+function scale2x(s,w,h){const o=new Array(w*h*4),W=w*2,g=(x,y)=>s[Math.min(h-1,Math.max(0,y))*w+Math.min(w-1,Math.max(0,x))];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const P=g(x,y),A=g(x,y-1),Bq=g(x+1,y),C=g(x-1,y),D=g(x,y+1);let e0=P,e1=P,e2=P,e3=P;
+   if(C===A&&C!==D&&A!==Bq)e0=A;if(A===Bq&&A!==C&&Bq!==D)e1=Bq;if(D===C&&D!==Bq&&C!==A)e2=C;if(Bq===D&&Bq!==A&&D!==C)e3=D;
+   o[2*y*W+2*x]=e0;o[2*y*W+2*x+1]=e1;o[(2*y+1)*W+2*x]=e2;o[(2*y+1)*W+2*x+1]=e3}return o}
+const x8=(s,w)=>scale2x(scale2x(scale2x(s,w,w),w*2,w*2),w*4,w*4);
+let SRC=null,SRC8=null;
+const SPAL=()=>[PAPER,hex('#141019'),BALL[1],BALL[2],BALL[3],BALL[4],hex('#ffffff')];
+function src16(){if(SRC)return SRC;const a=new Array(256).fill(0),inside=(x,y)=>{if(x<0||y<0||x>15||y>15)return false;const dx=(x+.5-8)/6.5,dy=(y+.5-8.5)/6.5;return dx*dx+dy*dy<=1};
+  for(let y=0;y<16;y++)for(let x=0;x<16;x++){if(inside(x,y)){const dx=(x+.5-8)/6.5,dy=(y+.5-8.5)/6.5;a[y*16+x]=2+Math.min(3,Math.floor(litT([dx,dy,Math.sqrt(Math.max(0,1-dx*dx-dy*dy))])*4))}
+   else if(inside(x+1,y)||inside(x-1,y)||inside(x,y+1)||inside(x,y-1))a[y*16+x]=1}
+  a[8*16+6]=1;a[8*16+9]=1;a[5*16+5]=6;return SRC=a}
+const scol=(x,y)=>SPAL()[src16()[Math.min(15,Math.max(0,y))*16+Math.min(15,Math.max(0,x))]];
+const nearest8=(x,y)=>scol(Math.floor(x/8),Math.floor(y/8));
+const bilinear8=(x,y)=>{const u=(x+.5)/8-.5,v=(y+.5)/8-.5,x0=Math.floor(u),y0=Math.floor(v),fx=u-x0,fy=v-y0;return mix(mix(scol(x0,y0),scol(x0+1,y0),fx),mix(scol(x0,y0+1),scol(x0+1,y0+1),fx),fy)};
+const keys=t=>{t=Math.abs(t);const A=-.5;return t<1?(A+2)*t**3-(A+3)*t*t+1:t<2?A*t**3-5*A*t*t+8*A*t-4*A:0};
+const bicubic8=(x,y)=>{const u=(x+.5)/8-.5,v=(y+.5)/8-.5,x0=Math.floor(u),y0=Math.floor(v);let r=[0,0,0];
+  for(let j=-1;j<=2;j++)for(let i=-1;i<=2;i++){const w=keys(u-x0-i)*keys(v-y0-j),c=scol(x0+i,y0+j);r=r.map((q,k)=>q+c[k]*w)}return r};
+const scaler8=(x,y)=>{SRC8=SRC8||x8(src16(),16);return SPAL()[SRC8[y*128+x]]};
+function paint128(cv,fn){const c=cv.getContext('2d'),im=c.createImageData(128,128);
+  for(let y=0;y<128;y++)for(let x=0;x<128;x++){const v=fn(x,y),i=(y*128+x)*4;im.data[i]=cl(v[0])*255;im.data[i+1]=cl(v[1])*255;im.data[i+2]=cl(v[2])*255;im.data[i+3]=255}c.putImageData(im,0,0)}
+const crateIdx=(lx,ly)=>(lx<0||ly<0||lx>13||ly>13)?0:(lx===0||ly===0||lx===13||ly===13)?1:ly===1?4:(ly===7||lx===ly)?3:2;
+const CPAL=()=>[null,hex('#4a2e1c'),hex('#b07a46'),hex('#7a5030'),hex('#e0a868')];
+let CR=null,CR8=null,CRCV=null;
+function rotDraw(B,a,th){if(!CR){CR=[];for(let y=0;y<16;y++)for(let x=0;x<16;x++)CR.push(crateIdx(x-1,y-1))}if(a&&!CR8)CR8=x8(CR,16);
+  const co=Math.cos(th),si=Math.sin(th),P=CPAL();
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-16,dy=y+.5-16,sx=co*dx+si*dy+8,sy=-si*dx+co*dy+8;if(sx<0||sy<0||sx>=16||sy>=16)continue;
+   const idx=a?CR8[Math.floor(sy*8)*128+Math.floor(sx*8)]:CR[Math.floor(sy)*16+Math.floor(sx)];if(idx)B.set(x,y,P[idx])}}
+function crateCv(){if(CRCV)return CRCV;const c=Object.assign(document.createElement('canvas'),{width:14,height:14}),g=c.getContext('2d'),im=g.createImageData(14,14),P=CPAL();
+  for(let y=0;y<14;y++)for(let x=0;x<14;x++){const v=P[crateIdx(x,y)],i=(y*14+x)*4;im.data[i]=v[0]*255;im.data[i+1]=v[1]*255;im.data[i+2]=v[2]*255;im.data[i+3]=255}g.putImageData(im,0,0);return CRCV=c}
+// 화면 연출 항목용: 3x5 숫자 글꼴, 코인, 창
+const FONT={'0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111','+':'000010111010000','!':'010010010000010'};
+function text(B,str,x,y,c,al=1){for(const ch of str){const g=FONT[ch];for(let i=0;i<15;i++)if(g[i]==='1'){const px=x+i%3,py=y+Math.floor(i/3);if(px>=0&&py>=0&&px<N&&py<N)B.set(px,py,mix(B.get(px,py),c,al))}x+=4}}
+function coin(B,x,y){[[1,0],[2,0],[0,1],[1,1],[2,1],[3,1],[0,2],[1,2],[2,2],[3,2],[1,3],[2,3]].forEach(([i,j])=>B.set(x+i,y+j,i+j>3?hex('#b07a20'):i+j<2?hex('#fff0a0'):hex('#ffc830')))}
+function panel(B,cx,cy,w,h){if(w<2||h<2)return;const x0=Math.round(cx-w/2),x1=Math.round(cx+w/2)-1,y0=Math.round(cy-h/2),y1=Math.round(cy+h/2)-1;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let c=(x===x0||x===x1||y===y0||y===y1)?hex('#3a2a2a'):y<=y0+2?hex('#c9925a'):hex('#efe4cc');
+   if(c!==hex('#3a2a2a')&&(y===y0+5||y===y0+8)&&x>x0+2&&x<x1-2)c=hex('#b8a888');B.set(x,y,c)}}
+const inEll=(x,y,cx,cy,rx,ry)=>{const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;return dx*dx+dy*dy<=1};
+function view(B,cx,cy=0,z=1){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,wpix(Math.floor(cx+(x+.5)/z),Math.floor(cy+(y+.5)/z)))}
+
+// 항목마다 해상도를 바꿀 수 있게: k는 32 기준 좌표를 지금 해상도로 바꾸는 배율
+const H3=norm([L[0],L[1],L[2]+1]);
+const sh3=(n,base,ks=.3,p=40)=>base.map(v=>v*(.16+.84*Math.max(0,dot(n,L)))+ks*Math.pow(Math.max(0,dot(n,H3)),p));
+const box=(B,x0,y0,x1,y1,c)=>{for(let y=Math.round(y0);y<=Math.round(y1);y++)for(let x=Math.round(x0);x<=Math.round(x1);x++)B.set(x,y,c)};
+function up32(B,fn){const n0=N;N=32;const T=Buf();fn(T);N=n0;const k=N/32;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,T.get(Math.floor(x/k),Math.floor(y/k)))}
+
+function cap(B,x0,y0,x1,y1,r,c){const dx=x1-x0,dy=y1-y0,l2=dx*dx+dy*dy||1;
+  for(let y=Math.floor(Math.min(y0,y1)-r-1);y<=Math.ceil(Math.max(y0,y1)+r+1);y++)for(let x=Math.floor(Math.min(x0,x1)-r-1);x<=Math.ceil(Math.max(x0,x1)+r+1);x++){
+   const t=cl(((x+.5-x0)*dx+(y+.5-y0)*dy)/l2);if(Math.hypot(x+.5-x0-t*dx,y+.5-y0-t*dy)<=r)B.set(x,y,c)}}
+// PBR 항목용 간단한 재질 계산: 베이스 컬러, 메탈릭, 러프니스
+const ENV=r=>mix(hex('#4a3a30'),hex('#9ab8d8'),cl(-r[1]*.5+.5));
+function pbr(n,base,metal,rough,o={}){const Ld=o.L||L,nl=Math.max(0,dot(n,Ld)),H=norm([Ld[0],Ld[1],Ld[2]+1]),nh=Math.max(0,dot(n,H)),nv=Math.max(0,n[2]),dir=o.direct??1;
+  const F0=mix([.04,.04,.04],base,metal),Fr=o.noFresnel?F0:F0.map(f=>f+(1-f)*Math.pow(1-nv,5)),p=Math.max(2,2/Math.max(.0016,rough**4)-2),nm=o.noEnergy?40:Math.min(60,(p+8)/(8*Math.PI)*1.2),sp=Math.pow(nh,p)*nm;
+  const r=[2*n[2]*n[0],2*n[2]*n[1],2*n[2]*n[2]-1],env=(o.env||ENV)(r),ek=(1-rough)*.85+.15,amb=o.amb??.12,ac=o.ambC?o.ambC(n):[1,1,1],lc=o.lightC||[1,1,1];
+  return[0,1,2].map(i=>cl(base[i]*(1-metal)*(nl*dir*lc[i]+amb*ac[i])+base[i]*metal*(nl*dir*.35+amb*ac[i]*.5)+Fr[i]*sp*nl*dir*lc[i]+Fr[i]*env[i]*ek*(o.envAmt??.9)))}
+const pbrBG=B=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(hex('#9ab8d8'),hex('#4a3a30'),y/(N-1)))};
+
+const CATS=[
+ {id:'basic',name:'셰이더 기초',en:'SHADER BASICS'},
+ {id:'map',name:'텍스처 맵',en:'TEXTURE MAPS'},
+ {id:'light2d',name:'2D 조명',en:'2D LIGHTING'},
+ {id:'fx',name:'맵으로 만드는 효과',en:'MAP EFFECTS'},
+ {id:'post',name:'후처리 셰이더',en:'POST-PROCESS SHADERS'},
+ {id:'three',name:'3D 렌더링 기법',en:'3D RENDERING'}];
+const toL1=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,toS1=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
+const grade=(B,g)=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,g(B.get(x,y),x,y).map(cl))};
+const contrast=(c,k)=>c.map(v=>(v-.5)*k+.5);
+const edgeOf=(m,x,y)=>!m(x,y)&&(m(x+1,y)||m(x-1,y)||m(x,y+1)||m(x,y-1));
+const desat=(c,k)=>mix(c,gray(c),k);
+const MOODS={warm:c=>c.map((v,i)=>v*[1.12,.96,.74][i]),tense:c=>contrast(mix(c,[c[0]*1.25,c[1]*.5,c[2]*.5],.6),1.5),
+  sad:c=>desat(c,.6).map((v,i)=>v*[.75,.86,1.12][i]),hope:c=>c.map((v,i)=>v*[1.15,1.05,.72][i]+.05),cool:c=>c.map((v,i)=>v*[.72,.88,1.15][i])};
+function hills(B,sky0,sky1,base,fogs,k=[1,1,1]){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(sky0,sky1,y/31));
+  [[12,3.2,.9],[17,4.5,1.7],[23,2.6,1.1]].forEach(([h,fr,amp],li)=>{const c=mix(base,sky1,fogs[li]).map((v,i)=>v*k[i]);for(let x=0;x<N;x++){const top=h+Math.sin(x/fr+li*2)*amp*2;for(let y=Math.ceil(top);y<N;y++)B.set(x,y,c)}})}
+function swatches(B,cols,y0=27,h=4){const w=Math.floor(26/cols.length);cols.forEach((c,i)=>{for(let y=y0;y<y0+h;y++)for(let x=3+i*w;x<3+(i+1)*w;x++)B.set(x,y,c)})}
+const nearestOf=(P,c)=>{let best=P[0],bd=9;P.forEach(p=>{const d=(p[0]-c[0])**2+(p[1]-c[1])**2+(p[2]-c[2])**2;if(d<bd){bd=d;best=p}});return best};
+const PICO8=['#000000','#1d2b53','#7e2553','#008751','#ab5236','#5f574f','#c2c3c7','#fff1e8','#ff004d','#ffa300','#ffec27','#00e436','#29adff','#83769c','#ff77a8','#ffccaa'].map(hex);
+const DB32=['#000000','#222034','#45283c','#663931','#8f563b','#df7126','#d9a066','#eec39a','#fbf236','#99e550','#6abe30','#37946e','#4b692f','#524b24','#323c39','#3f3f74','#306082','#5b6ee1','#639bff','#5fcde4','#cbdbfc','#ffffff','#9badb7','#847e87','#696a6a','#595652','#76428a','#ac3232','#d95763','#d77bba','#8f974a','#8a6f30'].map(hex);
+
+const hsv=(h,s,v)=>{h=((h%360)+360)%360;const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1))};return[f(5),f(3),f(1)]};
+const hsl=(h,s,l)=>{h=((h%360)+360)%360;const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return l-a*Math.max(-1,Math.min(k-3,9-k,1))};return[f(0),f(8),f(4)]};
+// 색상 하나로 4단계 램프. 어두울수록 파랑 쪽, 밝을수록 노랑 쪽으로 조금 옮긴다
+const hueRamp=(h,s=.7)=>[hsv(h+18,Math.min(1,s*1.05),.28),hsv(h+8,s,.5),hsv(h,s*.9,.75),hsv(h-12,s*.55,.97)];
+const gray=c=>{const v=lum(c);return[v,v,v]};
+function eqLum(h,s,target){let lo=0,hi=1;for(let i=0;i<20;i++){const m=(lo+hi)/2;lum(hsv(h,s,m))<target?lo=m:hi=m}return hsv(h,s,(lo+hi)/2)}
+
+// 배색 항목용 방: 벽, 바닥, 가구, 캐릭터, 강조(등불과 러그)
+function room(B,P,sw){const R=(c,t)=>{const[h,s,v]=c;return hsv(h-(t-.5)*24,Math.min(1,s*(1.15-.3*t)),Math.min(1,v*(.55+.7*t)))};
+  for(let y=0;y<28;y++)for(let x=0;x<N;x++){if(y<19){const row=Math.floor(y/4),lx=(x+(row%2)*3)%6;B.set(x,y,R(P.wall,(y%4===3||lx===5)?.3:.5))}else B.set(x,y,R(P.floor,x%7===0?.3:.5))}
+  for(let y=27;y>=24;y--)for(let x=14;x<=30;x++)if(inEll(x,y,22,25.5,8,2.2))B.set(x,y,R(P.accent,y===24?.7:.45));
+  for(let x=3;x<=13;x++){B.set(x,16,R(P.furn,.75));B.set(x,17,R(P.furn,.45))}for(let y=18;y<=23;y++){B.set(4,y,R(P.furn,.3));B.set(12,y,R(P.furn,.3))}
+  for(let y=12;y<=15;y++)for(let x=7;x<=9;x++)B.set(x,y,y===12?R(P.furn,.2):R(P.accent,(x===8&&y>12&&y<15)?1:.75));
+  ellipsoid(B,22,18,4,5,n=>R(P.char,litT(n)));B.set(20,17,hex('#141019'));B.set(23,17,hex('#141019'));
+  const cols=[P.wall,P.floor,P.furn,P.char,P.accent].map(c=>R(c,.5)),ws=sw||[6,6,7,6,7];let x=0;
+  for(let y=28;y<N;y++)for(let xx=0;xx<N;xx++)B.set(xx,y,hex('#ece8df'));
+  ws.forEach((w,i)=>{for(let y=29;y<N;y++)for(let k=0;k<w;k++)if(x+k<N)B.set(x+k,y,cols[i]);x+=w})}
+const RAND={wall:[200,.5,.7],floor:[30,.7,.6],furn:[120,.7,.6],char:[300,.6,.85],accent:[60,.9,.95]};
+const ANALOG={wall:[200,.4,.62],floor:[225,.45,.45],furn:[175,.45,.48],char:[190,.4,.88],accent:[155,.55,.9]};
+const COMP={wall:[210,.4,.55],floor:[220,.45,.4],furn:[200,.5,.45],char:[30,.6,.95],accent:[25,.9,1]};
+
+// 블렌드 모드: 바닥 장면 위에 둥근 색 층을 얹는다
+function blendCard(B,a,col,fn){tavern(B);blob(B,16,27,4,5);const C=hex(col);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const m=cl(1.15-Math.hypot(x+.5-16,y+.5-14)/12);if(!m)continue;const b=B.get(x,y);
+   B.set(x,y,a?mix(b,fn(b,C).map(cl),m):mix(b,C,m*.5))}}
+
+// 벽돌 높이: 줄눈은 0, 벽돌 가운데로 갈수록 높아진다
+const hB=(x,y)=>{x=Math.max(0,Math.min(N-1,x));y=Math.max(0,Math.min(N-1,y));const row=Math.floor(y/5),ly=y%5,lx=(x+(row%2)*4)%8;if(ly===4||lx===7)return 0;return Math.min(1,.45+.28*Math.min(lx,6-lx,ly,3-ly))};
+const nB=(x,y)=>norm([(hB(x-1,y)-hB(x+1,y))*2,(hB(x,y-1)-hB(x,y+1))*2,1]);
+const nColor=n=>[n[0]*.5+.5,-n[1]*.5+.5,n[2]*.5+.5];
+const vnoise=(x,y)=>{const x0=Math.floor(x),y0=Math.floor(y),sm=t=>t*t*(3-2*t),u=sm(x-x0),v=sm(y-y0),h=(i,j)=>hash(i+100,j+100);
+  const a=h(x0,y0),b=h(x0+1,y0),c=h(x0,y0+1),d=h(x0+1,y0+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v};
+const copyOf=B=>{const T=Buf();T.d.set(B.d);return T};
+const at=(T,x,y)=>T.get(Math.min(N-1,Math.max(0,x)),Math.min(N-1,Math.max(0,y)));
+// 깊이가 있는 산 장면: 색과 깊이(가까울수록 1)를 함께 돌려준다
+function layered(){const C=[],D=[],sky0=hex('#8ab8d0'),sky1=hex('#d8e8ee');for(let y=0;y<N;y++)for(let x=0;x<N;x++){C[y*N+x]=mix(sky0,sky1,y/31);D[y*N+x]=0}
+  const tops=[];[[12,3.2,.9,hex('#6a7a98'),.25],[17,4.5,1.7,hex('#465472'),.55],[23,2.6,1.1,hex('#232c40'),.9]].forEach(([h,fr,amp,col,dep],li)=>{
+   for(let x=0;x<N;x++){const top=Math.ceil(h+Math.sin(x/fr+li*2)*amp*2);if(li===1)tops[x]=top;for(let y=top;y<N;y++){let c=col;if(li===0&&y===top)c=mix(col,[1,1,1],.6);if(li===2&&(x+y)%3===0)c=mul(col,.8);C[y*N+x]=c;D[y*N+x]=dep}}
+   if(li===1){const base=tops[20];for(let y=base-6;y<base;y++)for(let x=18;x<=23;x++){const i=y*N+x;C[i]=y<base-4?hex('#5a2a2a'):(x===20&&y===base-2)?hex('#ffd070'):hex('#8a5a40');D[i]=dep}}});
+  return{C,D}}
+const putLayered=(B,f)=>{const{C,D}=layered();for(let i=0;i<N*N;i++)B.set(i%N,Math.floor(i/N),f?f(C,D,i):C[i])};
+
+const TERMS=[
+{cat:'basic',ko:'셰이더, 프래그먼트 셰이더',en:'Shader / Fragment Shader',lb:'원본',la:'셰이더 적용',b:'그린 그대로',a:'맞으면 흰색으로 깜박임',anim:true,
+ d:'그래픽 카드(GPU)에서 픽셀마다 실행되는 작은 프로그램입니다. 픽셀의 최종 색을 계산하는 쪽을 프래그먼트(픽셀) 셰이더라고 합니다. 그림을 다시 그리지 않고 색을 바꾸거나 효과를 얹을 수 있습니다.',
+ t:'오른쪽은 맞았을 때 스프라이트 전체를 흰색으로 바꾸는 히트 플래시 셰이더입니다. 흰색 프레임을 따로 그리지 않아도 됩니다.',
+ draw(B,a,f,s=0){tavern(B);const fl=a&&(s%1.2)<.15;ellipsoid(B,16,21,5,6,n=>fl?hex('#ffffff'):quant(BALL,litT(n)));if(!fl){B.set(14,20,INK);B.set(17,20,INK)}}},
+{cat:'basic',ko:'버텍스 셰이더',en:'Vertex Shader',lb:'원본',la:'버텍스 셰이더',b:'멈춘 풀',a:'끝만 흔들리는 풀',anim:true,
+ d:'도형의 꼭짓점(버텍스) 위치를 바꾸는 셰이더입니다. 풀, 깃발, 물 표면처럼 일부만 흔들리는 움직임을 프레임을 더 그리지 않고 만들 때 씁니다.',
+ t:'꼭짓점마다 높이에 비례해서 흔드는 양을 정하면 뿌리는 고정되고 끝만 흔들립니다.',
+ draw(B,a,f,s=0){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(hex('#9ac8e8'),hex('#e8f2f0'),y/26));for(let y=26;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,hex('#5a4030'));
+  const G=['#1f4a2a','#2f7a3a','#5aa84a','#a8d870'].map(hex);for(let x=0;x<N;x++){const hg=6+Math.floor(hash(x,2)*7);for(let k=0;k<hg;k++){const px=x+(a?Math.round(Math.sin(s*2.2+x*.35)*k/hg*2.4):0);B.set(px,25-k,G[Math.min(3,Math.floor(k/hg*4))])}}}},
+{cat:'basic',ko:'UV 좌표',en:'UV Coordinates',lb:'스프라이트',la:'UV 시각화',b:'벽돌 텍스처',a:'U는 빨강, V는 초록',
+ d:'텍스처의 어느 위치를 읽을지 나타내는 좌표입니다. 가로를 U, 세로를 V라고 하고 0에서 1 사이 값을 씁니다. 셰이더 효과 대부분은 이 UV를 밀거나 휘거나 흔들어서 만듭니다.',
+ t:'오른쪽은 U 값을 빨강, V 값을 초록으로 칠한 모습입니다. 왼쪽 아래가 (0, 0), 오른쪽 위가 (1, 1)입니다.',
+ draw(B,a){if(!a){bricks(B,false,true);return}for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,[x/31,1-y/31,0])}},
+{cat:'basic',ko:'UV 스크롤',en:'UV Scrolling',lb:'원본',la:'UV 스크롤',b:'멈춘 구름',a:'흘러가는 구름',anim:true,
+ d:'시간이 지날수록 UV 좌표에 일정한 값을 더해서 텍스처를 한 방향으로 계속 흘려보내는 방법입니다. 구름, 흐르는 물, 컨베이어 벨트, 배경 스크롤에 씁니다.',
+ t:'텍스처가 끝과 처음이 이어지는 타일형이어야 이음매 없이 계속 흐릅니다.',
+ draw(B,a,f,s=0){const o=a?s*3:0;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=vnoise((x+o)/7,y/5)*.65+vnoise((x+o)/3.5,y/2.5)*.35;B.set(x,y,v>.62?hex('#ffffff'):v>.55?hex('#dcecf6'):mix(hex('#5a9ad8'),hex('#a8d0f0'),y/31))}}},
+{cat:'basic',ko:'노이즈 텍스처',en:'Noise Texture',lb:'화이트 노이즈',la:'밸류 노이즈',b:'픽셀마다 무작위',a:'부드럽게 이어짐',
+ d:'셰이더에서 불규칙한 무늬를 만들 때 쓰는 흑백 텍스처입니다. 화이트 노이즈는 픽셀마다 완전히 무작위라 지글거리고, 밸류 노이즈나 펄린 노이즈는 부드럽게 이어져서 구름, 불꽃, 디졸브, 물결의 재료가 됩니다.',
+ t:'크기가 다른 노이즈 몇 장을 겹치면(프랙탈 노이즈) 더 자연스러운 무늬가 됩니다. 오른쪽이 두 장을 겹친 모습입니다.',
+ draw(B,a){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=a?vnoise(x/6,y/6)*.65+vnoise(x/3,y/3)*.35:hash(x,y);B.set(x,y,[v,v,v])}}},
+
+{cat:'map',ko:'노멀 맵',en:'Normal Map',lb:'스프라이트',la:'노멀 맵',b:'벽돌 텍스처',a:'표면 방향을 색으로',
+ d:'표면이 어느 방향을 향하는지를 색으로 저장한 텍스처입니다. 빨강은 좌우, 초록은 위아래, 파랑은 정면 방향을 뜻해서, 평평한 곳은 연보라(128, 128, 255)가 됩니다. 2D 스프라이트에 조명을 비출 때 씁니다.',
+ t:'엔진마다 초록 방향이 반대일 수 있습니다(OpenGL은 위가 초록, DirectX는 아래가 초록). 조명이 뒤집혀 보이면 초록 채널을 반전합니다.',
+ draw(B,a){bricks(B,false,false);if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,nColor(nB(x,y)))}},
+{cat:'map',ko:'하이트 맵',en:'Height Map',lb:'스프라이트',la:'하이트 맵',b:'벽돌 텍스처',a:'흰색이 높음',
+ d:'표면의 높낮이를 흑백으로 저장한 텍스처입니다. 흰색이 높고 검은색이 낮습니다. 하이트 맵에서 노멀 맵을 자동으로 만들 수 있고, 시차 매핑과 물결 같은 효과에도 씁니다.',
+ t:'노멀 맵은 손으로 그리기 어려워서, 하이트 맵을 칠한 뒤 도구로 노멀 맵을 뽑는 방법을 많이 씁니다. 왼쪽 노멀 맵도 이 하이트 맵에서 계산한 것입니다.',
+ draw(B,a){bricks(B,false,false);if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=hB(x,y);B.set(x,y,[v,v,v])}}},
+{cat:'map',ko:'뎁스 맵, 깊이 버퍼',en:'Depth Map / Depth Buffer',lb:'장면',la:'뎁스 맵',b:'산과 집',a:'가까울수록 밝음',
+ d:'화면의 각 픽셀이 카메라에서 얼마나 떨어져 있는지 저장한 이미지입니다. 여기서는 가까울수록 밝게 칠했고, 엔진에 따라 반대로 쓰기도 합니다. 안개, 피사계 심도, 앞뒤 가림, 그림자 계산에 씁니다.',
+ t:'2D 게임에서는 레이어마다 깊이 값을 정해 두는 것만으로도 뎁스 맵처럼 쓸 수 있습니다.',
+ draw(B,a){putLayered(B,a?(C,D,i)=>[D[i],D[i],D[i]]:null)}},
+{cat:'map',ko:'AO 맵',en:'Ambient Occlusion Map',lb:'스프라이트',la:'AO 맵',b:'벽돌 텍스처',a:'틈이 어두움',
+ d:'주변광이 덜 드는 오목한 곳을 미리 어둡게 계산해 둔 흑백 텍스처입니다. 기본 색 위에 곱하기로 얹으면 틈과 모서리에 깊이가 생깁니다.',
+ draw(B,a){bricks(B,false,false);if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=cl(.3+hB(x,y)*1.05);B.set(x,y,[v,v,v])}}},
+{cat:'map',res:64,ko:'러프니스 맵, 스페큘러 맵',en:'Roughness / Specular Map',lb:'맵 없음',la:'러프니스 맵',b:'나무까지 플라스틱처럼 반짝임',a:'금속 띠만 반짝임',anim:true,
+ d:'표면이 얼마나 거친지 흑백으로 저장한 텍스처입니다. 매끈한 곳은 하이라이트가 작고 선명하게, 거친 곳은 흐리거나 아예 없게 나옵니다. 반대로 얼마나 반짝이는지를 저장하는 스페큘러 맵, 글로시니스 맵도 같은 역할입니다.',
+ t:'빛이 좌우로 움직일 때 하이라이트가 어디를 지나가는지 보면 차이가 잘 보입니다. 나무 통에 두른 쇠테처럼 한 물체 안에 재질이 섞여 있을 때 맵 하나로 광택을 나눌 수 있습니다.',
+ draw(B,a,f,s=0){const k=N/32;fill(B,PAPER);ground(B,Math.round(27*k));const W=['#3a2418','#6a4028','#9a6a40','#c89a60'].map(hex),M=['#3a3020','#7a6a40','#c8b070','#fff0c0'].map(hex),Ld=norm([Math.sin(s*1.1)*.85,-.55,.6]),Hd=norm([Ld[0],Ld[1],Ld[2]+1]);
+  sphere(B,16*k,15*k,10.5*k,(n,x,y)=>{const Y=(y+.5)/k,metal=(Y>=10&&Y<12)||(Y>=19&&Y<21),sp=dot(n,Hd);if((!a||metal)&&sp>.975)return hex('#ffffff');if((!a||metal)&&sp>.94)return mix(quant(metal?M:W,litWith(n,Ld)),[1,1,1],.5);return quant(metal?M:W,litWith(n,Ld))})}},
+{cat:'map',ko:'이미시브 맵',en:'Emissive Map',lb:'맵 없음',la:'이미시브 맵',b:'어두운 벽의 문양',a:'문양만 빛남',
+ d:'스스로 빛나는 부분만 따로 표시한 텍스처입니다. 조명이 없어도 이 부분은 항상 밝게 그려지고, 블룸과 함께 쓰면 빛이 번집니다.',
+ t:'마법진, 눈빛, 화면, 네온사인처럼 어두운 장면에서도 보여야 하는 곳에 씁니다.',
+ draw(B,a){bricks(B,true,false);const m=(x,y)=>{const d=Math.hypot(x+.5-16,y+.5-16);return Math.abs(d-8)<.7||(Math.abs(x+.5-16)<.7&&Math.abs(y+.5-16)<5.5)||(Math.abs(y+.5-16)<.7&&Math.abs(x+.5-16)<5.5)};
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(a){const d=Math.hypot(x+.5-16,y+.5-16),g=d<11?.18:0;if(g)B.set(x,y,mix(B.get(x,y),hex('#40e0ff'),g))}if(m(x,y))B.set(x,y,a?hex('#c8faff'):hex('#2a1a1e'))}}},
+{cat:'map',ko:'마스크 맵',en:'Mask Map',lb:'마스크 맵',la:'마스크로 색 바꿈',b:'흰 곳이 효과 범위',a:'목도리만 색이 바뀜',
+ d:'셰이더에게 어디에 효과를 줄지 알려 주는 텍스처입니다. 흰 곳에만 색 바꾸기, 반짝임, 흔들림 같은 효과가 들어갑니다. R, G, B, A 네 채널에 서로 다른 마스크를 하나씩 넣어 한 장으로 쓰기도 합니다.',
+ t:'왼쪽이 마스크, 오른쪽이 마스크 범위만 색을 바꾼 결과입니다. 팔레트 스왑보다 넓은 범위의 색 변형을 할 수 있습니다.',
+ draw(B,a){tavern(B);const sc=(x,y)=>inEll(x,y,16,21,5,6)&&y>=21&&y<=22;
+  ellipsoid(B,16,21,5,6,(n,x,y)=>{if(!a)return sc(x,y)?hex('#ffffff'):hex('#2a2a30');return quant(sc(x,y)?hueRamp(45,.85):BALL,litT(n))});if(a){B.set(14,20,INK);B.set(17,20,INK)}}},
+{cat:'map',ko:'플로우 맵',en:'Flow Map',lb:'한 방향 스크롤',la:'플로우 맵',b:'강둑을 가로질러 흐름',a:'강을 따라 흐름',anim:true,
+ d:'물이나 연기가 흐르는 방향을 픽셀마다 색으로 저장한 텍스처입니다. 셰이더가 이 방향대로 무늬를 밀어서, 굽은 강이나 소용돌이도 자연스럽게 흐릅니다.',
+ t:'UV 스크롤은 화면 전체를 한 방향으로만 밀 수 있어서, 굽은 강에서는 물결이 강둑을 가로지르는 것처럼 보입니다.',
+ draw(B,a,f,s=0){fill(B,hex('#4a7a3a'));for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(hash(x,y)>.86)B.set(x,y,hex('#5a8a44'));
+  const cx=y=>16+6*Math.sin(y/6),Wt=['#1d4e89','#2f7ec4','#a8dcf8'].map(hex);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const off=x-cx(y);if(Math.abs(off)>=5)continue;const p=a?Math.sin(y*1.3-s*6+off*.35):Math.sin(x*1.3-s*6+y*.2);B.set(x,y,p>.7?Wt[2]:p>-.1?Wt[1]:Wt[0])}}},
+
+{cat:'fx',ko:'2D 다이나믹 라이팅',en:'2D Dynamic Lighting',lb:'노멀 맵 없음',la:'노멀 맵 사용',b:'밝기만 변함',a:'벽돌 요철이 빛을 받음',anim:true,
+ d:'움직이는 광원에 맞춰 스프라이트의 명암이 실시간으로 바뀌는 조명입니다. 노멀 맵이 없으면 광원과의 거리에 따라 밝기만 변하고, 노멀 맵이 있으면 빛 쪽을 향한 면만 밝아져 입체감이 생깁니다.',
+ draw(B,a,f,s=0){const T=Buf();bricks(T,false,false);const lx=16+11*Math.cos(s*.9),ly=16+9*Math.sin(s*.9);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=lx-x,dy=ly-y,fall=cl(1-Math.hypot(dx,dy)/20),l=norm([dx,dy,4]),n=nB(x,y),k=a?.12+fall*Math.max(0,dot(n,l))*1.5:.12+fall*.9;
+   B.set(x,y,T.get(x,y).map(v=>v*k*1.4))}
+  B.set(Math.round(lx),Math.round(ly),hex('#fff6d0'))}},
+{cat:'fx',ko:'깊이 안개',en:'Depth Fog',lb:'안개 없음',la:'깊이 안개',b:'모든 층이 같은 진하기',a:'멀수록 안개가 짙음',
+ d:'뎁스 맵의 값에 따라 멀리 있는 픽셀일수록 안개 색을 더 많이 섞는 효과입니다. 1편의 대기 원근을 셰이더로 자동 계산하는 방식입니다.',
+ draw(B,a){putLayered(B,a?(C,D,i)=>D[i]?mix(C[i],hex('#c8d8e4'),(1-D[i])*.8):C[i]:null)}},
+{cat:'fx',ko:'피사계 심도',en:'Depth of Field',lb:'전부 선명',la:'피사계 심도',b:'초점 없음',a:'가운데 층에만 초점',
+ d:'카메라 초점이 맞은 거리만 선명하고, 그보다 가깝거나 먼 곳은 흐리게 만드는 효과입니다. 뎁스 맵 값으로 픽셀마다 흐림 정도를 정합니다.',
+ t:'픽셀아트에서는 흐림 때문에 픽셀이 뭉개지므로, 배경 층에만 약하게 쓰거나 대화 장면처럼 짧은 연출에만 씁니다.',
+ draw(B,a){const{C,D}=layered();for(let y=0;y<N;y++)for(let x=0;x<N;x++){const i=y*N+x,r=a?Math.round(Math.abs(D[i]-.55)*3.2):0;let acc=[0,0,0],k=0;
+  for(let j=-r;j<=r;j++)for(let q=-r;q<=r;q++){const xx=Math.min(N-1,Math.max(0,x+q)),yy=Math.min(N-1,Math.max(0,y+j)),c=C[yy*N+xx];acc=acc.map((v,z)=>v+c[z]);k++}B.set(x,y,acc.map(v=>v/k))}}},
+{cat:'fx',ko:'시차 매핑',en:'Parallax Mapping',lb:'평면 텍스처',la:'시차 매핑',b:'벽 전체가 같이 밀림',a:'튀어나온 곳이 더 밀림',anim:true,
+ d:'보는 각도가 바뀔 때 하이트 맵에서 높은 곳은 많이, 낮은 곳은 적게 밀어서 표면이 실제로 울퉁불퉁한 것처럼 보이게 하는 기법입니다. 1편의 패럴랙스 스크롤을 픽셀 하나하나에 적용한 셈입니다.',
+ draw(B,a,f,s=0){const T=Buf();bricks(T,false,true);const v=Math.sin(s*1.2)*2.2;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const o=a?Math.round(v*(hB(x,y)-.2)*1.6):Math.round(v*.6);B.set(x,y,at(T,x-o,y))}}},
+{cat:'fx',ko:'림 라이트 셰이더',en:'Rim Light Shader',lb:'원본',la:'림 셰이더',b:'어둠에 묻힘',a:'가장자리가 밝게 떠오름',
+ d:'표면이 화면과 비스듬해지는 가장자리일수록 밝은 색을 더하는 셰이더입니다. 계산이 가벼워서 실루엣 강조, 선택 표시, 유령이나 보호막 효과에 많이 씁니다.',
+ t:'1편의 림 라이트는 손으로 칠하는 방법이고, 이 항목은 표면 방향(노멀)으로 자동 계산하는 방법입니다.',
+ draw(B,a){fill(B,DARK);ellipsoid(B,16,16,9,11,n=>{const c=quant(BALL,litT(n)*.5),r=Math.pow(1-n[2],1.6);return a?c.map((v,i)=>v+[.45,.85,1][i]*(r>.55?1:r>.35?.45:0)):c})}},
+{cat:'fx',res:64,ko:'디스토션, 열기 일렁임',en:'Distortion / Heat Haze',lb:'원본',la:'디스토션',b:'불 위 공기가 멈춰 있음',a:'불 위 공기가 일렁임',anim:true,
+ d:'화면을 읽어 오는 위치를 조금씩 흔들어서 열기, 물속, 충격파처럼 공기가 일렁이는 느낌을 내는 셰이더입니다. 노이즈나 사인파로 흔드는 양을 정합니다.',
+ t:'불꽃 바로 위가 가장 많이 흔들리고, 위로 올라갈수록 약해지게 하면 자연스럽습니다.',
+ draw(B,a,f,s=0){const k=N/32;up32(B,T=>bricks(T,false,true));for(let y=Math.round(26*k);y<N;y++)for(let x=0;x<N;x++)B.set(x,y,hex('#3a2c26'));
+  grade(B,(c,x,y)=>{const g=Math.exp(-(((x+.5)/k-16)**2)/40-(((y+.5)/k-24)**2)/50);return c.map((v,i)=>v*(.55+.7*g)+[.35,.18,.05][i]*g)});
+  cap(B,11*k,28*k,21*k,26.5*k,1.1*k,hex('#5a3820'));cap(B,11*k,26.5*k,21*k,28*k,1.1*k,hex('#7a5030'));
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const Y=(y+.5)/k,X=(x+.5)/k,h=(27-Y)/10;if(h<0||h>1)continue;const w=(1-h)*3.4*(.65+.55*vnoise(X/1.6,Y/1.6+s*4));if(Math.abs(X-16)>w)continue;B.set(x,y,h<.3?hex('#fff3b0'):h<.6?hex('#ffb040'):hex('#e05020'))}
+  if(!a)return;const T=copyOf(B);for(let y=0;y<N;y++)for(let x=0;x<N;x++){const X=(x+.5)/k,Y=(y+.5)/k,m=Y<21&&Y>2&&Math.abs(X-16)<8?(1-Math.abs(X-16)/8)*cl((21-Y)/6)*cl((Y-2)/8):0;
+   if(m)B.set(x,y,at(T,Math.round(x+Math.sin(Y*.9+s*7)*1.4*k*m),Math.round(y+Math.sin(X*.7+s*5)*.6*k*m)))}}},
+{cat:'post',ko:'색수차',en:'Chromatic Aberration',lb:'원본',la:'색수차',b:'선명한 경계',a:'가장자리에 무지개 테',
+ d:'빨강, 초록, 파랑을 살짝 다른 위치에 그려서 경계에 색 테가 생기게 하는 효과입니다. 원래는 렌즈가 색마다 빛을 다르게 꺾어서 생기는 결함인데, 게임에서는 충격, 혼란, 글리치 연출에 일부러 넣습니다.',
+ t:'화면 가장자리로 갈수록 어긋나는 양을 늘리면 렌즈처럼 보입니다. 픽셀아트에서는 1픽셀만 어긋나도 크게 보이니 짧은 순간에만 씁니다.',
+ draw(B,a){tavern(B);blob(B,16,27,4,5);if(!a)return;const T=copyOf(B);for(let y=0;y<N;y++)for(let x=0;x<N;x++){const o=Math.round((x-15.5)/16*1.6);B.set(x,y,[at(T,x-o,y)[0],T.get(x,y)[1],at(T,x+o,y)[2]])}}},
+{cat:'post',ko:'CRT와 스캔라인',en:'CRT / Scanlines',lb:'원본',la:'CRT 효과',b:'평평한 화면',a:'가로줄과 RGB 점',
+ d:'옛 브라운관 모니터처럼 가로줄(스캔라인)과 빨강, 초록, 파랑 점 무늬를 얹는 효과입니다. 레트로 느낌을 낼 때 설정 옵션으로 많이 넣습니다.',
+ draw(B,a){tavern(B);blob(B,16,27,4,5);if(a)grade(B,(c,x,y)=>c.map((v,i)=>v*(y%2?.55:1.08)*[[1.15,.9,.9],[.9,1.15,.9],[.9,.9,1.15]][x%3][i]))}},
+{cat:'post',ko:'픽셀화, 모자이크',en:'Pixelate / Mosaic',lb:'원본',la:'픽셀화',b:'원래 해상도',a:'칸이 커졌다 작아짐',anim:true,
+ d:'화면을 큰 칸으로 나눠 칸마다 한 색으로 채우는 효과입니다. 칸 크기를 점점 키웠다 줄이면 장면이 녹았다가 다시 맺히는 전환이 되고, 가리기에도 씁니다.',
+ draw(B,a,f,s=0){tavern(B);blob(B,16,27,4,5);if(!a)return;const T=copyOf(B),ph=(s/2.4)%1,k=[1,2,4,8,4,2][Math.floor(ph*6)];
+  for(let y=0;y<N;y+=k)for(let x=0;x<N;x+=k){let acc=[0,0,0];for(let j=0;j<k;j++)for(let i=0;i<k;i++){const c=T.get(x+i,y+j);acc=acc.map((v,z)=>v+c[z])}const c=acc.map(v=>v/(k*k));for(let j=0;j<k;j++)for(let i=0;i<k;i++)B.set(x+i,y+j,c)}}},
+{cat:'post',ko:'아웃라인 셰이더',en:'Outline Shader',lb:'원본',la:'셰이더 외곽선',b:'외곽선 없음',a:'투명 경계에 자동 외곽선',
+ d:'스프라이트의 투명한 경계를 찾아 바깥에 테두리를 그리는 셰이더입니다. 그림에 외곽선을 직접 그리지 않아도 되고, 색과 두께를 상황에 따라 바꿀 수 있습니다.',
+ t:'선택 표시, 피격 표시, 겹친 캐릭터를 하나로 묶는 외곽선에 씁니다.',
+ draw(B,a){tavern(B);const m=(x,y)=>inEll(x,y,12,20,5,6)||inEll(x,y,21,21,4,5);if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(edgeOf(m,x,y))B.set(x,y,hex('#f4ecd0'));
+  ellipsoid(B,12,20,5,6,n=>quant(BALL,litT(n)));ellipsoid(B,21,21,4,5,n=>quant(hueRamp(0,.7),litT(n)))}},
+{cat:'post',ko:'필름 그레인',en:'Film Grain / Noise',lb:'원본',la:'필름 그레인',b:'깨끗한 화면',a:'자글자글한 입자',anim:true,
+ d:'프레임마다 바뀌는 작은 노이즈를 화면 전체에 얹어 필름이나 오래된 영상처럼 보이게 하는 효과입니다. 공포나 회상 장면의 분위기를 만들 때 씁니다.',
+ draw(B,a,f,s=0){tavern(B);blob(B,16,27,4,5);if(!a)return;const fr=Math.floor(s*12);grade(B,(c,x,y)=>c.map(v=>v+(hash(x+fr*31,y+fr*17)-.5)*.16))}},
+{cat:'post',ko:'렌즈 디스토션',en:'Lens Distortion',lb:'원본',la:'배럴 디스토션',b:'반듯한 화면',a:'가운데가 부푼 화면',
+ d:'렌즈처럼 화면 가운데를 부풀리거나 가장자리를 휘게 만드는 효과입니다. 볼록한 CRT 화면, 어안 렌즈, 어지러운 연출에 씁니다.',
+ draw(B,a){const T=Buf();tavern(T);blob(T,16,27,4,5);for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!a){B.set(x,y,T.get(x,y));continue}
+  const dx=(x+.5-16)/16,dy=(y+.5-16)/16,r2=dx*dx+dy*dy,k=1-.22*(1-r2),sx=Math.floor(16+dx*16*k),sy=Math.floor(16+dy*16*k);B.set(x,y,sx<0||sy<0||sx>=N||sy>=N?hex('#000000'):T.get(sx,sy))}}},
+{cat:'post',ko:'포스터라이즈와 디더 셰이더',en:'Posterize & Dither Shader',lb:'원본',la:'포스터라이즈와 디더',b:'부드러운 그라데이션',a:'단계를 줄이고 디더링',
+ d:'색 단계를 몇 개로 줄이는 포스터라이즈에 순서 디더링을 더하는 후처리입니다. 부드러운 3D 렌더나 사진을 실시간으로 픽셀아트처럼 보이게 만들 때 씁니다.',
+ draw(B,a){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=cl(1-Math.hypot(x-24,y-6)/28),c=mix(mix(hex('#2a1a4a'),hex('#e07a50'),v),hex('#ffe8b0'),v*v*.6);
+  B.set(x,y,a?c.map(q=>Math.round(q*3+(BAYER[y%4][x%4]/16-.5))/3):c)}}},
+{cat:'basic',ko:'머티리얼',en:'Material',lb:'셰이더 하나',la:'머티리얼 셋',b:'기본 값',a:'같은 셰이더, 다른 값',
+ d:'셰이더가 계산 방법을 적은 프로그램이라면, 머티리얼은 그 셰이더에 색, 세기, 텍스처 같은 값을 채워 넣은 설정입니다. 셰이더 하나로 값만 다른 머티리얼을 여러 개 만들 수 있습니다.',
+ t:'오른쪽 세 캐릭터는 모두 같은 림 셰이더를 쓰고, 머티리얼에서 림 색과 세기만 바꿨습니다.',
+ draw(B,a){fill(B,DARK);const rb=(cx,col,k)=>ellipsoid(B,cx,18,a?3.8:6,a?5:7.5,n=>{const r=Math.pow(1-n[2],1.6);return quant(BALL,litT(n)*.5).map((v,i)=>v+col[i]*k*(r>.55?1:r>.35?.45:0))});
+  if(a){rb(6,[.45,.85,1],1);rb(16,[1,.8,.3],1.1);rb(26,[1,.3,.3],.7)}else rb(16,[.45,.85,1],1)}},
+{cat:'basic',ko:'알파 테스트와 알파 블렌딩',en:'Alpha Test vs Alpha Blending',lb:'알파 테스트',la:'알파 블렌딩',b:'보이거나 안 보이거나',a:'반투명하게 섞임',
+ d:'투명도를 처리하는 두 방식입니다. 알파 테스트(알파 클립)는 기준값보다 투명하면 버리고 아니면 그대로 그려서 경계가 딱 잘립니다. 알파 블렌딩은 투명도만큼 뒤 화면과 섞어서 반투명하게 그립니다.',
+ t:'픽셀아트 스프라이트는 보통 알파 테스트를 씁니다. 그리는 순서를 신경 쓰지 않아도 되고 가장자리가 번지지 않습니다. 유령, 연기, 유리처럼 비쳐야 하는 것만 블렌딩으로 그립니다.',
+ draw(B,a){tavern(B);const G=hex('#b8e8ff');for(let y=0;y<N;y++)for(let x=0;x<N;x++){const al=cl((1-Math.hypot(x+.5-16,y+.5-15)/9)*1.4)*.85;if(!al)continue;if(a)B.set(x,y,mix(B.get(x,y),G,al));else if(al>.5)B.set(x,y,G)}}},
+{cat:'basic',ko:'스텐실 마스크',en:'Stencil Mask',lb:'마스크 없음',la:'스텐실 마스크',b:'화면 전체에 그림',a:'동그란 창 안에만 그림',
+ d:'먼저 모양 하나를 따로 기록해 두고, 그 모양 안쪽(또는 바깥쪽)에만 그리게 하는 기능입니다. 동그란 미니맵, 창문 너머 풍경, 구멍 뚫린 화면 전환에 씁니다.',
+ draw(B,a){putLayered(B);if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x+.5-16,y+.5-15);if(d>11.5)B.set(x,y,d<13?hex('#3a2a2a'):hex('#1c1a24'))}}},
+{cat:'basic',ko:'렌더 텍스처',en:'Render Texture / Render Target',lb:'장면',la:'렌더 텍스처',b:'바로 화면에 그림',a:'장면을 이미지로 받아 다시 씀',
+ d:'화면에 바로 그리지 않고 장면을 이미지 한 장에 먼저 그려 두는 기능입니다. 그 이미지를 다시 텍스처처럼 쓸 수 있어서 거울, 모니터 속 화면, 미니맵, 후처리 효과의 바탕이 됩니다.',
+ t:'1편의 로우레스 렌더링도 저해상도 렌더 텍스처에 그린 뒤 키우는 방식입니다.',
+ draw(B,a){tavern(B);blob(B,16,27,4,5);if(!a)return;const T=copyOf(B);for(let y=2;y<=11;y++)for(let x=3;x<=14;x++)B.set(x,y,(x===3||x===14||y===2||y===11)?hex('#2a1c1c'):at(T,Math.floor((x-4)*3.2),Math.floor((y-3)*4)))}},
+{cat:'basic',ko:'드로우 콜과 배칭',en:'Draw Calls & Batching',lb:'따로 그리기',la:'배칭',b:'스프라이트마다 한 번씩',a:'아틀라스로 묶어 한 번에',
+ d:'CPU가 GPU에게 "이걸 그려라" 하고 요청하는 한 번을 드로우 콜이라고 합니다. 스프라이트마다 텍스처가 다르면 요청이 그만큼 늘어나 느려집니다. 같은 텍스처(아틀라스)를 쓰는 스프라이트끼리 묶어 한 번에 요청하는 것을 배칭이라고 합니다.',
+ t:'테두리 색이 다른 것은 따로 그린다는 뜻이고, 아래 숫자가 드로우 콜 수입니다. 화면에 같은 종류가 많이 나오는 손님, 코인, 파티클은 아틀라스 하나에 모읍니다.',
+ draw(B,a){fill(B,hex('#1c1a24'));const cols=['#ff5050','#50d050','#5090ff','#ffd040','#d060ff','#40e0e0'].map(hex);
+  for(let i=0;i<12;i++){const gx=2+(i%4)*7,gy=2+Math.floor(i/4)*7;for(let y=gy;y<gy+6;y++)for(let x=gx;x<gx+6;x++)if(x===gx||x===gx+5||y===gy||y===gy+5)B.set(x,y,a?hex('#6a6a80'):cols[i%6]);coin(B,gx+1,gy+1)}
+  text(B,a?'1':'12',a?15:13,25,hex('#ffe08a'))}},
+
+{cat:'light2d',ko:'라이트 맵, 라이트 레이어',en:'Light Map / Light Layer',lb:'라이트 맵',la:'합성 결과',b:'빛만 따로 그린 층',a:'어두운 장면에 곱해 합성',
+ d:'빛이 닿는 모양과 색을 따로 그린 이미지를 어두운 장면 위에 곱하기나 더하기로 얹어 조명을 만드는 방식입니다. 2D 게임 조명에서 가장 흔하고 가벼운 구현입니다.',
+ t:'왼쪽이 라이트 맵입니다. 등불 쪽은 주황, 창문 쪽은 푸른빛으로 칠했습니다. 시간대에 따라 이 층만 바꾸면 밤낮이 바뀝니다.',
+ draw(B,a){const LM=(x,y)=>{const l1=Math.exp(-((x-22)**2+(y-10)**2)/40)*1.1,l2=Math.exp(-((x-7.5)**2+(y-9)**2)/50)*.8;return[l1+l2*.7,l1*.75+l2*.75,l1*.45+l2*.9]};
+  if(!a){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,LM(x,y).map(cl));return}tavern(B);blob(B,16,27,4,5);grade(B,(c,x,y)=>{const l=LM(x,y);return c.map((v,i)=>v*(.22+l[i]*1.3))})}},
+{cat:'light2d',ko:'2D 그림자 캐스팅',en:'2D Shadow Casting',lb:'그림자 없음',la:'그림자 캐스팅',b:'빛이 상자를 뚫고 지나감',a:'상자 뒤로 그림자가 뻗음',
+ d:'광원에서 각 픽셀까지 선을 그어 중간에 막는 물체가 있으면 그 픽셀을 어둡게 하는 방식입니다. 등불이 움직이면 그림자도 따라 움직입니다.',
+ t:'모든 픽셀마다 선을 긋는 대신, 실제 게임에서는 막는 물체의 외곽선만 가지고 그림자 모양을 계산해서 가볍게 만듭니다.',
+ draw(B,a){tavern(B);crate(B,15,14,21,20,1);const lx=6,ly=6,box=(x,y)=>x>=15&&x<=21&&y>=14&&y<=20;
+  grade(B,(c,x,y)=>{let sh=false;if(a&&!box(x,y)){const dx=lx-x,dy=ly-y,n=Math.ceil(Math.hypot(dx,dy));for(let k=1;k<n;k++)if(box(Math.round(x+dx*k/n),Math.round(y+dy*k/n))){sh=true;break}}
+   const f=cl(1.15-Math.hypot(x-lx,y-ly)/28);return c.map(v=>v*(.22+(sh?0:f)*1.15))});B.set(lx,ly,hex('#fff6d0'))}},
+{cat:'light2d',ko:'블룸 파이프라인',en:'Bloom Pipeline',lb:'밝은 곳 골라내기',la:'흐려서 더하기',b:'1단계: 기준보다 밝은 픽셀만',a:'2, 3단계: 흐리게 한 뒤 원본에 더함',
+ d:'블룸은 세 단계로 만듭니다. 기준보다 밝은 픽셀만 골라낸 뒤, 그 이미지를 흐리게 퍼뜨리고, 원래 화면에 더합니다. 기준값을 낮추면 더 많은 곳이 빛나고, 흐림을 넓히면 빛이 멀리 번집니다.',
+ t:'기준을 너무 낮추면 흰 벽이나 피부까지 빛나서 화면이 뿌옇게 됩니다.',
+ draw(B,a){tavern(B);blob(B,16,27,4,5);const T=copyOf(B),br=(x,y)=>{const c=at(T,x,y);return lum(c)>.62?c:[0,0,0]};
+  if(!a){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,br(x,y));return}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){let acc=[0,0,0],w=0;for(let j=-3;j<=3;j++)for(let i=-3;i<=3;i++){const g=Math.exp(-(i*i+j*j)/6),c=br(x+i,y+j);acc=acc.map((v,z)=>v+c[z]*g);w+=g}B.set(x,y,T.get(x,y).map((v,z)=>v+acc[z]/w*1.6))}}},
+
+{cat:'fx',ko:'물 반사',en:'Water Reflection',lb:'반사 없음',la:'물 반사',b:'파란 수면',a:'뒤집혀 비치고 일렁임',anim:true,
+ d:'수면 위의 장면을 위아래로 뒤집어 수면에 그리고, 가로로 조금씩 흔들어 물결을 내는 효과입니다. 반사된 쪽은 물 색을 섞고 살짝 어둡게 해야 진짜 물처럼 보입니다.',
+ draw(B,a,f,s=0){const{C}=layered();for(let y=0;y<18;y++)for(let x=0;x<N;x++)B.set(x,y,C[Math.min(31,Math.round(y*31/17))*N+x]);
+  for(let y=18;y<N;y++)for(let x=0;x<N;x++){const w=mix(hex('#2a4a6a'),hex('#1a2a40'),(y-18)/13);if(!a){B.set(x,y,w);continue}const o=Math.round(Math.sin(y*1.1+s*4)*.9);B.set(x,y,mix(mul(B.get(Math.min(N-1,Math.max(0,x+o)),35-y),.85),w,.35))}}},
+{cat:'fx',ko:'쇼크웨이브',en:'Shockwave',lb:'원본',la:'쇼크웨이브',b:'충격 없음',a:'원형으로 퍼지는 일렁임',anim:true,
+ d:'한 점에서 고리 모양으로 퍼져 나가며 그 부분의 화면을 바깥쪽으로 밀어내는 디스토션입니다. 폭발, 착지, 마법 발동 순간에 짧게 씁니다.',
+ draw(B,a,f,s=0){const T=Buf();tavern(T);blob(T,16,27,4,5);if(!a){B.d.set(T.d);return}const r=(s%1.6)/1.6*24;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-16,dy=y+.5-18,d=Math.hypot(dx,dy)||1,bd=d-r,k=Math.abs(bd)<3?Math.cos(bd/3*Math.PI/2):0;
+   B.set(x,y,at(T,Math.round(x-dx/d*k*2.2),Math.round(y-dy/d*k*2.2)).map(v=>v+k*.12))}}},
+{cat:'fx',ko:'가우시안 블러',en:'Gaussian Blur',lb:'원본',la:'가우시안 블러',b:'선명함',a:'가까운 픽셀일수록 많이 섞어 흐림',
+ d:'주변 픽셀을 섞어서 흐리게 만드는 방법 중 하나로, 가까운 픽셀일수록 더 많이 섞습니다. 블룸, 피사계 심도, 창 뒤 배경 흐림의 기본 재료입니다.',
+ t:'가로로 한 번, 세로로 한 번 나눠서 흐리면 같은 결과를 훨씬 빠르게 얻습니다.',
+ draw(B,a){tavern(B);blob(B,16,27,4,5);if(!a)return;const g=[-3,-2,-1,0,1,2,3].map(i=>[i,Math.exp(-i*i/5.1)]),sum=g.reduce((s,[,w])=>s+w,0);
+  for(const dir of [[1,0],[0,1]]){const T=copyOf(B);for(let y=0;y<N;y++)for(let x=0;x<N;x++){let acc=[0,0,0];g.forEach(([i,w])=>{const c=at(T,x+dir[0]*i,y+dir[1]*i);acc=acc.map((v,z)=>v+c[z]*w)});B.set(x,y,acc.map(v=>v/sum))}}}},
+{cat:'fx',ko:'팔레트 스왑 셰이더, LUT',en:'Palette Swap Shader (LUT)',lb:'색 번호 텍스처',la:'LUT로 색 바꿈',b:'색 대신 번호를 저장',a:'번호표만 바꿔 색 변형',anim:true,
+ d:'스프라이트에 실제 색 대신 "몇 번 색"인지 번호만 저장하고, 셰이더가 작은 색 번호표(LUT) 텍스처를 보고 색을 칠하는 방식입니다. 번호표만 바꾸면 같은 그림이 실시간으로 다른 색이 됩니다.',
+ t:'왼쪽은 번호를 밝기로 보여 준 것입니다. 오른쪽은 번호표 세 장을 1초마다 바꿔 끼웁니다. 같은 체형에 색만 다른 캐릭터가 많을 때 유용합니다.',
+ draw(B,a,f,s=0){tavern(B);const P=[[...hueRamp(215),...hueRamp(0).slice(1,3),INK],[...hueRamp(120),...hueRamp(45).slice(1,3),INK],[...hueRamp(285),...hueRamp(170).slice(1,3),INK]][a?Math.floor(s)%3:0];
+  ellipsoid(B,16,21,5,6,(n,x,y)=>{let i=Math.min(3,Math.floor(litT(n)*4));if(y>=21&&y<=22)i=litT(n)>.5?5:4;if((x===14||x===17)&&y===20)i=6;return a?P[i]:[i/6,i/6,i/6]})}},
+
+{cat:'three',tag:'3D 전용',res:96,ko:'SSAO, 화면 공간 AO',en:'Screen Space Ambient Occlusion',lb:'AO 없음',la:'SSAO',b:'물체가 바닥에 떠 보임',a:'닿는 곳과 구석이 어두워짐',
+ d:'뎁스 맵을 보고 픽셀 주변이 얼마나 막혀 있는지를 화면 단위로 계산해서 실시간으로 AO를 만드는 기법입니다. 미리 구워 둔 AO 맵과 달리 물체가 움직여도 따라옵니다.',
+ t:'2D 픽셀아트에서는 AO를 그림에 직접 칠하는 편이 훨씬 깔끔해서 거의 쓰지 않습니다.',
+ draw(B,a){const k=N/32;floorWall(B,hex('#c8c4bc'),hex('#a8a29a'),Math.round(20*k));box(B,3*k,12*k,9*k,20*k-1,hex('#b0aca4'));box(B,3*k,12*k,9*k,13*k,hex('#e0dcd4'));box(B,8*k,13*k,9*k,20*k-1,hex('#8a867e'));
+  if(a)grade(B,(c,x,y)=>{const X=(x+.5)/k,Y=(y+.5)/k,sp=cl(1-Math.hypot(X-16,(Y-21.3)*2.2)/8),cor=Y>=18.5&&Y<=21.5?(1-Math.abs(Y-20)/1.5)*.22:0,bx=X>=9&&X<=12.5&&Y>=16&&Y<=22?(1-(X-9)/3.5)*.32:0;return mul(c,1-Math.min(.7,sp*sp*.75+cor+bx))});
+  sphere(B,16*k,15*k,6*k,n=>sh3(n,hex('#e6e6ea'),.35,50))}},
+{cat:'three',tag:'3D 전용',res:96,ko:'SSR, 화면 공간 반사',en:'Screen Space Reflection',lb:'반사 없음',la:'SSR',b:'광택 없는 바닥',a:'바닥에 물체가 비침',
+ d:'이미 화면에 그려진 이미지를 다시 읽어서 반짝이는 바닥이나 물에 반사를 그리는 기법입니다. 계산이 빠르지만, 화면 밖에 있는 물체는 반사에 나오지 않는다는 한계가 있습니다.',
+ t:'오른쪽 기둥 꼭대기는 화면 밖이라 반사에서도 잘려 보입니다. 2D에서는 물 반사 항목처럼 장면을 뒤집어 그리는 방법으로 충분합니다.',
+ draw(B,a){const k=N/32,hz=Math.round(20*k);floorWall(B,hex('#4a4a5a'),hex('#2a2a34'),hz);sphere(B,10*k,14*k,5*k,n=>sh3(n,hex('#c83a3a'),.5,60));
+  for(let y=0;y<hz;y++)for(let x=Math.round(20*k);x<=Math.round(24*k);x++){const u=(x-20*k)/(4*k);B.set(x,y,mul(hex('#5a8ad8'),.35+.75*Math.sin(u*Math.PI*.85+.25)))}
+  if(!a)return;const T=copyOf(B),obj=(x,y)=>inEll(x,y,10*k,14*k,5*k,5*k)||(x>=Math.round(20*k)&&x<=Math.round(24*k));
+  for(let y=hz;y<N;y++)for(let x=0;x<N;x++){const sy=2*hz-1-y;if(sy>=0&&obj(x,sy))B.set(x,y,mix(B.get(x,y),T.get(x,sy),.6*(1-(y-hz)/(N-hz))))}}},
+{cat:'three',tag:'3D 전용',res:96,ko:'PBR, 물리 기반 렌더링',en:'Physically Based Rendering',lb:'비금속',la:'금속',b:'거칠기만 다른 공 셋',a:'같은 거칠기의 금속 공 셋',
+ d:'빛이 실제 재질에 닿을 때의 성질을 따라 계산하는 렌더링 방식입니다. 재질을 베이스 컬러, 메탈릭, 러프니스 세 값으로 정하고(메탈릭/러프니스 워크플로), 에너지 보존과 프레넬 같은 물리 규칙을 지켜서 어떤 조명 아래에 두어도 재질이 그럴듯하게 보이게 합니다. 아래 항목들에서 하나씩 나눠 봅니다.',
+ t:'왼쪽부터 매끈함, 중간, 거침입니다. 금속은 반사에 자기 색이 묻고, 비금속은 흰 하이라이트와 자기 색 명암이 따로 보입니다. 스페큘러 값과 글로시니스 값으로 정하는 스페큘러/글로시니스 워크플로도 있습니다.',
+ draw(B,a){const k=N/32;pbrBG(B);[[6,.15],[16,.45],[26,.8]].forEach(([cx,r])=>sphere(B,cx*k,15*k,4.6*k,n=>pbr(n,a?hex('#e8b040'):hex('#c03030'),a?1:0,r)))}},
+{cat:'three',tag:'3D 전용',res:96,ko:'베이스 컬러, 알베도',en:'Base Color / Albedo',lb:'명암을 칠한 텍스처',la:'알베도',b:'빛이 옮겨 가도 칠해 둔 하이라이트가 그대로',a:'빛을 따라 명암이 바뀜',anim:true,
+ d:'PBR에서 물체 본래의 색만 담는 텍스처입니다. 그림자와 하이라이트는 조명 계산이 만들기 때문에, 베이스 컬러에는 명암을 칠하지 않습니다. 명암을 미리 칠해 두면 빛이 바뀌어도 칠한 명암이 남아 어색해집니다.',
+ t:'명암을 그림에 직접 칠하는 픽셀아트 습관과 정반대라서, 3D 텍스처를 만들 때 가장 많이 헷갈리는 부분입니다.',
+ draw(B,a,f,s=0){const k=N/32;pbrBG(B);const Ld=norm([Math.sin(s*1.1)*.9,-.45,.55]),base=hex('#c86a3a');
+  sphere(B,16*k,15*k,9*k,n=>{let b=base;if(!a){const t=litT(n);b=base.map(v=>v*(.45+.9*t));if(dot(n,norm([L[0],L[1],L[2]+1]))>.97)b=[1,1,1]}return pbr(n,b,0,.5,{L:Ld})})}},
+{cat:'three',tag:'3D 전용',res:96,ko:'메탈릭',en:'Metallic',lb:'메탈릭 0',la:'메탈릭 1',b:'비금속: 자기 색 명암과 흰 하이라이트',a:'금속: 반사 전체에 자기 색이 묻음',
+ d:'재질이 금속인지 아닌지를 정하는 값입니다. 0이면 비금속으로, 빛 대부분이 표면 안으로 들어갔다 나와서 자기 색 명암을 만들고 하이라이트는 흰색입니다. 1이면 금속으로, 빛이 거의 다 표면에서 반사되고 그 반사에 자기 색이 묻습니다.',
+ t:'메탈릭은 거의 0 아니면 1로만 씁니다. 중간값은 녹슨 부분과 금속이 맞닿은 경계처럼 섞이는 곳에만 씁니다.',
+ draw(B,a){const k=N/32;pbrBG(B);sphere(B,16*k,15*k,10*k,n=>pbr(n,hex('#d8905a'),a?1:0,.3))}},
+{cat:'three',tag:'3D 전용',res:96,ko:'러프니스와 마이크로패싯',en:'Roughness & Microfacets',lb:'러프니스 0.1',la:'러프니스 0.7',b:'작고 선명한 하이라이트',a:'넓고 흐린 하이라이트',
+ d:'PBR은 표면을 눈에 안 보이는 아주 작은 면(마이크로패싯)들이 모인 것으로 봅니다. 러프니스가 낮으면 작은 면들이 한 방향을 보고 있어 빛이 한곳으로 반사되고, 높으면 제각각이라 빛이 넓게 흩어집니다.',
+ t:'아래 띠는 표면을 크게 확대한 단면입니다. 거칠수록 작은 면들이 들쭉날쭉합니다.',
+ draw(B,a){const k=N/32;pbrBG(B);sphere(B,16*k,13*k,9*k,n=>pbr(n,hex('#3a6ab0'),0,a?.7:.1));box(B,2*k,26*k,30*k,N-1,hex('#2a2834'));
+  for(let x=Math.round(2*k);x<=Math.round(30*k);x++){const X=x/k,h=a?Math.abs(((X*1.3)%2)-1)*1.6+vnoise(X*1.7,3)*.8:0;box(B,x,(27.5-h)*k,x,29*k,hex('#8a9ac8'))}}},
+{cat:'three',tag:'3D 전용',res:96,ko:'에너지 보존',en:'Energy Conservation',lb:'보존 안 함',la:'에너지 보존',b:'거친 공의 하이라이트도 똑같이 밝음',a:'넓게 퍼진 만큼 어두워짐',
+ d:'표면이 받은 빛보다 더 많은 빛을 내보낼 수 없다는 규칙입니다. 하이라이트가 넓게 퍼지면 그만큼 어두워져야 하고, 반사가 강한 재질은 그만큼 자기 색 명암이 약해집니다. 이 규칙을 지키지 않으면 거친 물체가 형광등처럼 빛나 보입니다.',
+ t:'왼쪽 공은 매끈함, 오른쪽 공은 거침입니다.',
+ draw(B,a){const k=N/32;pbrBG(B);[[9,.12],[23,.65]].forEach(([cx,r])=>sphere(B,cx*k,15*k,6.5*k,n=>pbr(n,hex('#2a2a32'),0,r,{noEnergy:!a,envAmt:.3})))}},
+{cat:'three',tag:'3D 전용',res:96,ko:'프레넬과 F0',en:'Fresnel & F0',lb:'프레넬 없음',la:'프레넬 있음',b:'반사가 어디서나 같음',a:'가장자리로 갈수록 반사가 강해짐',
+ d:'비스듬히 볼수록 반사가 강해지는 현상을 프레넬이라고 하고, 정면에서 봤을 때의 반사율을 F0라고 합니다. 대부분의 비금속은 F0가 약 4%로 정면에서는 거의 반사하지 않지만, 가장자리에서는 주변이 강하게 비칩니다. 금속은 F0가 50~100%이고 자기 색을 띱니다.',
+ t:'1편의 프레넬 항목을 PBR에서는 F0라는 숫자로 정확하게 다룹니다.',
+ draw(B,a){const k=N/32;pbrBG(B);sphere(B,16*k,15*k,10*k,n=>pbr(n,hex('#1a1a22'),0,.05,{noFresnel:!a,envAmt:1.6}))}},
+{cat:'three',tag:'3D 전용',res:96,ko:'IBL, 이미지 기반 조명',en:'Image-Based Lighting',lb:'광원 하나',la:'IBL',b:'빛 반대쪽은 그냥 어두움',a:'하늘과 땅의 빛이 사방에서 들어옴',
+ d:'주변 360도 풍경 이미지(환경 맵)를 조명으로 써서, 하늘, 땅, 주변 물체의 빛이 사방에서 물체를 비추게 하는 방식입니다. PBR 재질은 IBL과 함께 써야 실제처럼 보입니다.',
+ t:'위쪽은 하늘의 푸른빛, 아래쪽은 땅의 따뜻한 빛을 받습니다.',
+ draw(B,a){const k=N/32;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<N*.6?mix(hex('#f0a870'),hex('#5a8ad0'),1-y/(N*.6)):mix(hex('#8a6a40'),hex('#4a3a20'),(y-N*.6)/(N*.4)));
+  const env=r=>r[1]<0?mix(hex('#f0a870'),hex('#5a8ad0'),cl(-r[1])):mix(hex('#8a6a40'),hex('#4a3a20'),cl(r[1]));
+  sphere(B,16*k,14*k,9*k,n=>pbr(n,hex('#d8d8d8'),.3,.35,a?{env,ambC:n=>env([n[0],n[1],n[2]]),amb:.75,envAmt:.7}:{amb:0,envAmt:0}))}},
+{cat:'three',tag:'3D 전용',res:96,ko:'PBR 텍스처 세트',en:'PBR Texture Set',lb:'맵 네 장',la:'합친 결과',b:'베이스 컬러, 노멀, 러프니스, 메탈릭',a:'네 장을 합쳐 그린 벽',
+ d:'PBR 재질 하나는 보통 여러 장의 맵으로 이뤄집니다. 베이스 컬러(색), 노멀(요철), 러프니스(거칠기), 메탈릭(금속 여부)이 기본이고, AO와 하이트, 이미시브 맵을 더하기도 합니다.',
+ t:'왼쪽 위부터 베이스 컬러, 노멀, 러프니스, 메탈릭입니다. 오른쪽 벽 가운데의 쇠 띠만 메탈릭이 1입니다.',
+ draw(B,a){const k=N/32,T=(()=>{const n0=N;N=32;const t=Buf();bricks(t,false,false);N=n0;return t})(),band=Y=>Y>=14&&Y<17;
+  const mapAt=(X,Y,w)=>{const xi=Math.floor(X),yi=Math.floor(Y);if(w===0)return band(Y)?hex('#b8b8c0'):T.get(xi,yi);if(w===1)return nColor(band(Y)?[0,0,1]:nB(xi,yi));if(w===2){const v=band(Y)?.25:hB(xi,yi)?.7:.95;return[v,v,v]}return band(Y)?[1,1,1]:[0,0,0]};
+  if(!a){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const q=(x<N/2?0:1)+(y<N/2?0:2),X=(x%(N/2))/(N/2)*32,Y=(y%(N/2))/(N/2)*32;B.set(x,y,mapAt(X,Y,q))}box(B,N/2-1,0,N/2,N-1,PAPER);box(B,0,N/2-1,N-1,N/2,PAPER);return}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const X=(x+.5)/k,Y=(y+.5)/k,met=band(Y)?1:0,rough=band(Y)?.25:hB(Math.floor(X),Math.floor(Y))?.7:.95,n=band(Y)?norm([0,(Y-15.5)*.25,1]):nB(Math.floor(X),Math.floor(Y));
+   B.set(x,y,pbr(n,mapAt(X,Y,0),met,rough,{L:norm([-.5,-.6,.65]),amb:.25,envAmt:.5}))}}},
+{cat:'three',tag:'3D 전용',res:96,ko:'섀도 맵',en:'Shadow Mapping',lb:'광원에서 본 깊이',la:'그림자 결과',b:'광원 위치에서 찍은 뎁스 맵',a:'그 깊이로 그림자를 판정',
+ d:'광원 위치에 카메라가 있다고 치고 장면의 깊이를 한 번 찍어 둔 뒤, 화면의 각 픽셀이 그 깊이보다 멀면 그림자로 판정하는 기법입니다. 3D 게임 실시간 그림자의 기본입니다.',
+ t:'섀도 맵 해상도가 낮으면 그림자 가장자리가 계단처럼 깨지고, 판정 오차로 표면에 줄무늬(섀도 애크니)가 생기기도 합니다.',
+ draw(B,a){const k=N/32;if(!a){fill(B,hex('#202028'));for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x+.5-16*k,y+.5-16*k)/(8*k);if(d<1){const v=.55+.4*Math.sqrt(1-d*d);B.set(x,y,[v,v,v])}}return}
+  floorWall(B,hex('#3a3a48'),hex('#8a8478'),Math.round(21*k));for(let y=Math.round(21*k);y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-20.5*k)/(7.5*k),dy=(y+.5-25*k)/(2.6*k),d=dx*dx+dy*dy;if(d<1.15)darken(B,x,y,1-.55*cl((1.15-d)/.3))}
+  sphere(B,14*k,13*k,6*k,n=>sh3(n,hex('#e6e6ea'),.4,50))}}
+];
+
+
+function blit(cv,B){const n=B.n,ctx=cv.getContext('2d'),im=ctx.createImageData(n,n);for(let i=0;i<n*n;i++){for(let k=0;k<3;k++)im.data[i*4+k]=Math.round(cl(B.d[i*3+k])*255);im.data[i*4+3]=255}ctx.putImageData(im,0,0)}
+function render(cv,t,a,f=.5,s=0){if(t.paint)return t.paint(cv,a,s);N=t.res||32;try{const B=Buf();t.draw(B,a,f,s);blit(cv,B)}finally{N=32}}
+
+const nav=document.getElementById('nav'),main=document.getElementById('main'),anims=[];
+CATS.forEach(c=>{
+  const a=document.createElement('a');a.href='#'+c.id;a.textContent=c.name;nav.appendChild(a);
+  const sec=document.createElement('section');sec.id=c.id;
+  sec.innerHTML=`<h2>${c.name}<small>${c.en}</small></h2><div class="grid"></div>`;
+  const grid=sec.querySelector('.grid');
+  TERMS.filter(t=>t.cat===c.id).forEach(t=>{
+    const card=document.createElement('article');card.className='card';
+    card.innerHTML=`<h3>${t.ko}${t.tag?'<span class="badge">'+t.tag+'</span>':''}<span class="en">${t.en}</span></h3>
+      <div class="pair"><figure><canvas width="${t.paint?128:(t.res||32)}" height="${t.paint?128:(t.res||32)}" role="img" aria-label="${t.ko} 적용 전"></canvas><figcaption><b>${t.lb||'BEFORE'}</b>${t.b}</figcaption></figure>
+      <figure class="after"><canvas width="${t.paint?128:(t.res||32)}" height="${t.paint?128:(t.res||32)}" role="img" aria-label="${t.ko} 적용 후"></canvas><figcaption><b>${t.la||'AFTER'}</b>${t.a}</figcaption></figure></div>
+      <p>${t.d}</p>${t.t?`<p class="tip"><strong>픽셀아트에서는</strong> ${t.t}</p>`:''}`;
+    const [c0,c1]=card.querySelectorAll('canvas');render(c0,t,false);render(c1,t,true);
+    if(t.anim)anims.push([c0,c1,t]);
+    grid.appendChild(card)});
+  main.appendChild(sec)});
+
+if(anims.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const loop=ts=>{const f=.5-.5*Math.cos(ts/1800*Math.PI*2);anims.forEach(([c0,c1,t])=>{render(c0,t,false,f,ts/1000);render(c1,t,true,f,ts/1000)});requestAnimationFrame(loop)};
+  requestAnimationFrame(loop)}
+</script>
+</body>
+</html>

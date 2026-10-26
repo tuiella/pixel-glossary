@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>애니메이션과 리깅 용어집</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=DotGothic16&display=swap">
+<style>
+/* Layout: 좁은 헤더, 분류 칩, 카드마다 32x32 픽셀 장면 두 장을 나란히 */
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --fg:#1d2030; --muted:#5d6275; --line:#d5d9e2; --accent:#b8701f;
+  --display:"Do Hyeon","IBM Plex Sans KR",sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --pixel:"DotGothic16","IBM Plex Sans KR",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#13151b;--surface:#1c1f28;--fg:#e7e9f0;--muted:#9aa0b3;--line:#2d313d;--accent:#f0b45a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#13151b;--surface:#1c1f28;--fg:#e7e9f0;--muted:#9aa0b3;--line:#2d313d;--accent:#f0b45a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.65}
+body{word-break:keep-all;overflow-wrap:break-word}
+.wrap{max-width:1120px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header h1{font-family:var(--display);font-weight:400;font-size:clamp(32px,6vw,52px);line-height:1.1;margin:0 0 8px;text-wrap:balance}
+header p{color:var(--muted);margin:0;max-width:62ch}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 8px}
+nav a{font-size:13px;color:var(--fg);text-decoration:none;border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--surface)}
+nav a:hover,nav a:focus-visible{border-color:var(--accent);outline:none}
+h2{font-family:var(--display);font-weight:400;font-size:28px;margin:48px 0 16px;display:flex;align-items:baseline;gap:12px}
+h2 small{font-family:var(--pixel);font-size:13px;color:var(--muted);letter-spacing:.06em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.series{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}.series a{font-size:12px;padding:4px 10px;border-radius:4px;border:1px solid var(--line);color:var(--muted);text-decoration:none;background:var(--surface)}.series a:hover,.series a:focus-visible{border-color:var(--accent);color:var(--fg);outline:none}.series a[aria-current]{color:var(--fg);border-color:var(--accent);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h3{margin:0;font-size:18px;font-weight:600;line-height:1.3}
+.card h3 .en{display:block;font-family:var(--pixel);font-weight:400;font-size:12px;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+figure{margin:0;display:flex;flex-direction:column;gap:4px}
+canvas{width:100%;aspect-ratio:1;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:3px;display:block;max-width:100%}
+figcaption{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:baseline}
+figcaption b{font-family:var(--pixel);font-weight:400;font-size:11px;letter-spacing:.08em;color:var(--fg)}
+figure.after figcaption b{color:var(--accent)}
+.badge{font-size:11px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 8px;margin-left:8px;vertical-align:2px}
+.card p{margin:0;font-size:14px}
+.tip{font-size:13px;color:var(--muted)}
+.tip strong{color:var(--fg);font-weight:500}
+footer{margin-top:56px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+<nav class="series" aria-label="용어집 시리즈"><a href="https://tuiella.github.io/pixel-glossary/">1편 픽셀 셰이딩</a><a href="https://tuiella.github.io/pixel-glossary/color/">2편 색 표현</a><a href="https://tuiella.github.io/pixel-glossary/shader/">3편 맵과 셰이더</a><a href="https://tuiella.github.io/pixel-glossary/anim/" aria-current="page">4편 애니메이션과 리깅</a><a href="https://tuiella.github.io/pixel-glossary/production/">5편 게임 그래픽 실무</a></nav>
+  <h1>애니메이션과 리깅 용어집</h1>
+  <p>애니메이션과 리깅 용어를 비교 장면으로 정리했습니다. 이름 옆 표시는 스프라이트 방식, 리깅 방식, 공통 개념을 나타냅니다.</p>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<footer>모든 코드는 자바스크립트로 구현되어 있습니다.</footer>
+</div>
+
+<script>
+let N=32;
+const hex=(()=>{const m={};return h=>m[h]||(m[h]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255))})();
+const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const mul=(a,k)=>a.map(v=>v*k);
+const cl=v=>Math.max(0,Math.min(1,v));
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const norm=a=>{const l=Math.hypot(...a);return a.map(v=>v/l)};
+const quant=(r,t)=>r[Math.min(r.length-1,Math.max(0,Math.floor(t*r.length)))];
+const smooth=(r,t)=>{const s=cl(t)*(r.length-1),i=Math.min(r.length-2,Math.floor(s));return mix(r[i],r[i+1],s-i)};
+const L=norm([-.55,-.65,.52]);
+const litT=n=>cl((dot(n,L)+.3)/1.15);
+
+function Buf(){const n=N,d=new Float32Array(n*n*3);return{d,n,
+  set(x,y,c){if(x<0||y<0||x>=n||y>=n)return;const i=(y*n+x)*3;d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2]},
+  get(x,y){x=Math.min(n-1,Math.max(0,x));y=Math.min(n-1,Math.max(0,y));const i=(y*n+x)*3;return[d[i],d[i+1],d[i+2]]}}}
+function fill(B,c){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,c)}
+function floorWall(B,w,f,hy){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<hy?w:f)}
+function sphere(B,cx,cy,r,fn){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx)/r,dy=(y+.5-cy)/r,q=dx*dx+dy*dy;if(q<=1){const n=[dx,dy,Math.sqrt(1-q)];const c=fn(n,x,y,q);if(c)B.set(x,y,c)}}}
+function inSphere(x,y,cx,cy,r){const dx=(x+.5-cx)/r,dy=(y+.5-cy)/r;return dx*dx+dy*dy<=1}
+function darken(B,x,y,k){if(x<0||y<0||x>=N||y>=N)return;B.set(x,y,mul(B.get(x,y),k))}
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+
+const BALL=['#1b1f3a','#2c3f66','#3f6a93','#6ea3bf','#c4e6e6'].map(hex);
+const WALL=hex('#3b3550'),FLOOR=hex('#6b5442'),DARK=hex('#141019'),PAPER=hex('#e6e1d6'),INK=hex('#2b2540');
+
+function bricks(B,dark,shade){
+  const br=dark?hex('#4a2c30'):hex('#9a4f3c'),mo=dark?hex('#1e1418'):hex('#3c2a2a');
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const row=Math.floor(y/5),ly=y%5,ox=(row%2)*4,lx=(x+ox)%8;
+    let c=(ly===4||lx===7)?mo:br;
+    if(shade&&c===br){if(ly===0)c=hex('#c87055');else if(lx===0)c=hex('#b8604a');else if(ly===3)c=hex('#6e3328');else if(lx===6)c=hex('#7a392d')}
+    B.set(x,y,c)}}
+const hash=(x,y)=>{let n=Math.imul(x,374761393)+Math.imul(y,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296};
+const lum=c=>.299*c[0]+.587*c[1]+.114*c[2];
+function tavern(B){bricks(B,true,false);for(let y=20;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,(x+y)%6===0?hex('#4e3b30'):FLOOR);
+  for(let y=6;y<=13;y++)for(let x=12;x<=19;x++)B.set(x,y,(x===15||x===16||y===9)?hex('#3a2a2a'):hex('#e8c07a'));
+  for(let x=8;x<=23;x++){B.set(x,21,hex('#a87444'));B.set(x,22,hex('#6e4528'))}for(let y=23;y<=27;y++){B.set(9,y,hex('#5a3820'));B.set(22,y,hex('#5a3820'))}}
+function ellipsoid(B,cx,cy,rx,ry,fn){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,q=dx*dx+dy*dy;if(q<=1){const c=fn([dx,dy,Math.sqrt(1-q)],x,y);if(c)B.set(x,y,c)}}}
+function line(B,x0,y0,x1,y1,c){let dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,e=dx+dy;for(;;){B.set(x0,y0,c);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+function stairs(B,x,y,lens,c){for(const l of lens){for(let k=0;k<l;k++){B.set(x,y,c);x++}y++}}
+const litWith=(n,l)=>cl((dot(n,l)+.3)/1.15);
+const wrap=v=>((v%1)+1)%1;
+function ground(B,y){for(let yy=y;yy<N;yy++)for(let x=0;x<N;x++)B.set(x,yy,hex('#cfc8b8'))}
+function blob(B,cx,floor,rx,ry,lift=0,eyes=true){const cy=floor-ry-lift;ellipsoid(B,cx,cy,rx,ry,n=>quant(BALL,litT(n)));
+  if(eyes){B.set(Math.round(cx-2),Math.round(cy-1),INK);B.set(Math.round(cx+1),Math.round(cy-1),INK)}return cy}
+function crate(B,x0,y0,x1,y1,s){const w=Math.floor((x1-x0+1)/s),h=Math.floor((y1-y0+1)/s);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const lx=Math.floor((x-x0)/s),ly=Math.floor((y-y0)/s);if(lx>=w||ly>=h)continue;
+   let c=hex('#b07a46');if(lx===0||ly===0||lx===w-1||ly===h-1)c=hex('#4a2e1c');else if(ly===Math.floor(h/2)||Math.abs(lx-ly*(w/h))<.6)c=hex('#7a5030');B.set(x,y,c)}}
+// 카메라 항목용 가로 96px 주점. 0~47은 저녁 방, 48~95는 밤 방
+function wpix(x,y){if(x<0||x>=96||y<0||y>=N)return hex('#0a0a0e');const r=x%32,night=x>=48;
+  if(y>=22){if(r>=14&&r<=27&&y<=23)return hex(y===22?'#a87444':'#6e4528');if((r===15||r===26)&&y<=27)return hex('#5a3820');return(x+y)%6===0?hex('#4e3b30'):FLOOR}
+  if(r>=4&&r<=11&&y>=5&&y<=12)return(r===4||r===11||y===5||y===12||y===8)?hex('#3a2a2a'):hex(night?'#7ab4e0':'#e8c07a');
+  if(r>=21&&r<=23&&y>=8&&y<=11)return hex(r===22&&y>8&&y<11?'#fff6d8':'#ffc85a');
+  const row=Math.floor(y/5),ly=y%5,lx=(x+(row%2)*4)%8;let c=(ly===4||lx===7)?hex(night?'#14161e':'#1e1418'):hex(night?'#2c3048':'#4a2c30');
+  const d=Math.hypot(r-22,y-9.5);if(d<7)c=mix(c,hex('#ffb35a'),d<4?.35:.18);return c}
+// 하이레스 항목용: 저해상도 원본을 따로 만들어 128px 캔버스에 4배로 그린다
+let OFF=null;
+function off(){if(OFF)return OFF;
+  const mk=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),im=g.createImageData(w,h);
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){const v=fn(x,y);if(!v)continue;const i=(y*w+x)*4;im.data[i]=v[0]*255;im.data[i+1]=v[1]*255;im.data[i+2]=v[2]*255;im.data[i+3]=255}
+   g.putImageData(im,0,0);return c};
+  const world=mk(96,32,wpix);
+  const hero=mk(9,10,(x,y)=>{if(y===4&&(x===3||x===6))return INK;const dx=(x+.5-4.5)/4.5,dy=(y+.5-5)/5,q=dx*dx+dy*dy;return q<=1?quant(BALL,litT([dx,dy,Math.sqrt(1-q)])):null});
+  const sign=mk(10,14,(x,y)=>{if(y<4)return(x===4||x===5)?hex('#2a1c1c'):null;if(x===0||x===9||y===4||y===13)return hex('#2a1c1c');return(y>6&&y<11&&x>2&&x<7)?hex('#fff3cc'):hex('#ffc85a')});
+  const big=document.createElement('canvas');big.width=384;big.height=128;const bg=big.getContext('2d');bg.imageSmoothingEnabled=false;bg.drawImage(world,0,0,384,128);
+  return OFF={world,hero,sign,big}}
+function ctx2(cv){const c=cv.getContext('2d');c.setTransform(1,0,0,1,0,0);c.imageSmoothingEnabled=false;return c}
+// 확대와 회전 항목용: 색 번호 배열 스프라이트와 보간 함수
+function scale2x(s,w,h){const o=new Array(w*h*4),W=w*2,g=(x,y)=>s[Math.min(h-1,Math.max(0,y))*w+Math.min(w-1,Math.max(0,x))];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const P=g(x,y),A=g(x,y-1),Bq=g(x+1,y),C=g(x-1,y),D=g(x,y+1);let e0=P,e1=P,e2=P,e3=P;
+   if(C===A&&C!==D&&A!==Bq)e0=A;if(A===Bq&&A!==C&&Bq!==D)e1=Bq;if(D===C&&D!==Bq&&C!==A)e2=C;if(Bq===D&&Bq!==A&&D!==C)e3=D;
+   o[2*y*W+2*x]=e0;o[2*y*W+2*x+1]=e1;o[(2*y+1)*W+2*x]=e2;o[(2*y+1)*W+2*x+1]=e3}return o}
+const x8=(s,w)=>scale2x(scale2x(scale2x(s,w,w),w*2,w*2),w*4,w*4);
+let SRC=null,SRC8=null;
+const SPAL=()=>[PAPER,hex('#141019'),BALL[1],BALL[2],BALL[3],BALL[4],hex('#ffffff')];
+function src16(){if(SRC)return SRC;const a=new Array(256).fill(0),inside=(x,y)=>{if(x<0||y<0||x>15||y>15)return false;const dx=(x+.5-8)/6.5,dy=(y+.5-8.5)/6.5;return dx*dx+dy*dy<=1};
+  for(let y=0;y<16;y++)for(let x=0;x<16;x++){if(inside(x,y)){const dx=(x+.5-8)/6.5,dy=(y+.5-8.5)/6.5;a[y*16+x]=2+Math.min(3,Math.floor(litT([dx,dy,Math.sqrt(Math.max(0,1-dx*dx-dy*dy))])*4))}
+   else if(inside(x+1,y)||inside(x-1,y)||inside(x,y+1)||inside(x,y-1))a[y*16+x]=1}
+  a[8*16+6]=1;a[8*16+9]=1;a[5*16+5]=6;return SRC=a}
+const scol=(x,y)=>SPAL()[src16()[Math.min(15,Math.max(0,y))*16+Math.min(15,Math.max(0,x))]];
+const nearest8=(x,y)=>scol(Math.floor(x/8),Math.floor(y/8));
+const bilinear8=(x,y)=>{const u=(x+.5)/8-.5,v=(y+.5)/8-.5,x0=Math.floor(u),y0=Math.floor(v),fx=u-x0,fy=v-y0;return mix(mix(scol(x0,y0),scol(x0+1,y0),fx),mix(scol(x0,y0+1),scol(x0+1,y0+1),fx),fy)};
+const keys=t=>{t=Math.abs(t);const A=-.5;return t<1?(A+2)*t**3-(A+3)*t*t+1:t<2?A*t**3-5*A*t*t+8*A*t-4*A:0};
+const bicubic8=(x,y)=>{const u=(x+.5)/8-.5,v=(y+.5)/8-.5,x0=Math.floor(u),y0=Math.floor(v);let r=[0,0,0];
+  for(let j=-1;j<=2;j++)for(let i=-1;i<=2;i++){const w=keys(u-x0-i)*keys(v-y0-j),c=scol(x0+i,y0+j);r=r.map((q,k)=>q+c[k]*w)}return r};
+const scaler8=(x,y)=>{SRC8=SRC8||x8(src16(),16);return SPAL()[SRC8[y*128+x]]};
+function paint128(cv,fn){const c=cv.getContext('2d'),im=c.createImageData(128,128);
+  for(let y=0;y<128;y++)for(let x=0;x<128;x++){const v=fn(x,y),i=(y*128+x)*4;im.data[i]=cl(v[0])*255;im.data[i+1]=cl(v[1])*255;im.data[i+2]=cl(v[2])*255;im.data[i+3]=255}c.putImageData(im,0,0)}
+const crateIdx=(lx,ly)=>(lx<0||ly<0||lx>13||ly>13)?0:(lx===0||ly===0||lx===13||ly===13)?1:ly===1?4:(ly===7||lx===ly)?3:2;
+const CPAL=()=>[null,hex('#4a2e1c'),hex('#b07a46'),hex('#7a5030'),hex('#e0a868')];
+let CR=null,CR8=null,CRCV=null;
+function rotDraw(B,a,th){if(!CR){CR=[];for(let y=0;y<16;y++)for(let x=0;x<16;x++)CR.push(crateIdx(x-1,y-1))}if(a&&!CR8)CR8=x8(CR,16);
+  const co=Math.cos(th),si=Math.sin(th),P=CPAL();
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-16,dy=y+.5-16,sx=co*dx+si*dy+8,sy=-si*dx+co*dy+8;if(sx<0||sy<0||sx>=16||sy>=16)continue;
+   const idx=a?CR8[Math.floor(sy*8)*128+Math.floor(sx*8)]:CR[Math.floor(sy)*16+Math.floor(sx)];if(idx)B.set(x,y,P[idx])}}
+function crateCv(){if(CRCV)return CRCV;const c=Object.assign(document.createElement('canvas'),{width:14,height:14}),g=c.getContext('2d'),im=g.createImageData(14,14),P=CPAL();
+  for(let y=0;y<14;y++)for(let x=0;x<14;x++){const v=P[crateIdx(x,y)],i=(y*14+x)*4;im.data[i]=v[0]*255;im.data[i+1]=v[1]*255;im.data[i+2]=v[2]*255;im.data[i+3]=255}g.putImageData(im,0,0);return CRCV=c}
+// 화면 연출 항목용: 3x5 숫자 글꼴, 코인, 창
+const FONT={'0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111','+':'000010111010000','!':'010010010000010'};
+function text(B,str,x,y,c,al=1){for(const ch of str){const g=FONT[ch];for(let i=0;i<15;i++)if(g[i]==='1'){const px=x+i%3,py=y+Math.floor(i/3);if(px>=0&&py>=0&&px<N&&py<N)B.set(px,py,mix(B.get(px,py),c,al))}x+=4}}
+function coin(B,x,y){[[1,0],[2,0],[0,1],[1,1],[2,1],[3,1],[0,2],[1,2],[2,2],[3,2],[1,3],[2,3]].forEach(([i,j])=>B.set(x+i,y+j,i+j>3?hex('#b07a20'):i+j<2?hex('#fff0a0'):hex('#ffc830')))}
+function panel(B,cx,cy,w,h){if(w<2||h<2)return;const x0=Math.round(cx-w/2),x1=Math.round(cx+w/2)-1,y0=Math.round(cy-h/2),y1=Math.round(cy+h/2)-1;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let c=(x===x0||x===x1||y===y0||y===y1)?hex('#3a2a2a'):y<=y0+2?hex('#c9925a'):hex('#efe4cc');
+   if(c!==hex('#3a2a2a')&&(y===y0+5||y===y0+8)&&x>x0+2&&x<x1-2)c=hex('#b8a888');B.set(x,y,c)}}
+const inEll=(x,y,cx,cy,rx,ry)=>{const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;return dx*dx+dy*dy<=1};
+function view(B,cx,cy=0,z=1){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,wpix(Math.floor(cx+(x+.5)/z),Math.floor(cy+(y+.5)/z)))}
+
+// 항목마다 해상도를 바꿀 수 있게: k는 32 기준 좌표를 지금 해상도로 바꾸는 배율
+const H3=norm([L[0],L[1],L[2]+1]);
+const sh3=(n,base,ks=.3,p=40)=>base.map(v=>v*(.16+.84*Math.max(0,dot(n,L)))+ks*Math.pow(Math.max(0,dot(n,H3)),p));
+const box=(B,x0,y0,x1,y1,c)=>{for(let y=Math.round(y0);y<=Math.round(y1);y++)for(let x=Math.round(x0);x<=Math.round(x1);x++)B.set(x,y,c)};
+function up32(B,fn){const n0=N;N=32;const T=Buf();fn(T);N=n0;const k=N/32;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,T.get(Math.floor(x/k),Math.floor(y/k)))}
+
+const CATS=[
+ {id:'basic',name:'애니메이션 기초',en:'ANIMATION BASICS'},
+ {id:'rig',name:'리깅',en:'RIGGING'},
+ {id:'blend',name:'블렌딩과 상태',en:'BLENDING & STATES'},
+ {id:'method',name:'제작 방식 비교',en:'TECHNIQUES'}];
+const toL1=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,toS1=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
+const grade=(B,g)=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,g(B.get(x,y),x,y).map(cl))};
+const contrast=(c,k)=>c.map(v=>(v-.5)*k+.5);
+const edgeOf=(m,x,y)=>!m(x,y)&&(m(x+1,y)||m(x-1,y)||m(x,y+1)||m(x,y-1));
+const desat=(c,k)=>mix(c,gray(c),k);
+const MOODS={warm:c=>c.map((v,i)=>v*[1.12,.96,.74][i]),tense:c=>contrast(mix(c,[c[0]*1.25,c[1]*.5,c[2]*.5],.6),1.5),
+  sad:c=>desat(c,.6).map((v,i)=>v*[.75,.86,1.12][i]),hope:c=>c.map((v,i)=>v*[1.15,1.05,.72][i]+.05),cool:c=>c.map((v,i)=>v*[.72,.88,1.15][i])};
+function hills(B,sky0,sky1,base,fogs,k=[1,1,1]){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,mix(sky0,sky1,y/31));
+  [[12,3.2,.9],[17,4.5,1.7],[23,2.6,1.1]].forEach(([h,fr,amp],li)=>{const c=mix(base,sky1,fogs[li]).map((v,i)=>v*k[i]);for(let x=0;x<N;x++){const top=h+Math.sin(x/fr+li*2)*amp*2;for(let y=Math.ceil(top);y<N;y++)B.set(x,y,c)}})}
+function swatches(B,cols,y0=27,h=4){const w=Math.floor(26/cols.length);cols.forEach((c,i)=>{for(let y=y0;y<y0+h;y++)for(let x=3+i*w;x<3+(i+1)*w;x++)B.set(x,y,c)})}
+const nearestOf=(P,c)=>{let best=P[0],bd=9;P.forEach(p=>{const d=(p[0]-c[0])**2+(p[1]-c[1])**2+(p[2]-c[2])**2;if(d<bd){bd=d;best=p}});return best};
+const PICO8=['#000000','#1d2b53','#7e2553','#008751','#ab5236','#5f574f','#c2c3c7','#fff1e8','#ff004d','#ffa300','#ffec27','#00e436','#29adff','#83769c','#ff77a8','#ffccaa'].map(hex);
+const DB32=['#000000','#222034','#45283c','#663931','#8f563b','#df7126','#d9a066','#eec39a','#fbf236','#99e550','#6abe30','#37946e','#4b692f','#524b24','#323c39','#3f3f74','#306082','#5b6ee1','#639bff','#5fcde4','#cbdbfc','#ffffff','#9badb7','#847e87','#696a6a','#595652','#76428a','#ac3232','#d95763','#d77bba','#8f974a','#8a6f30'].map(hex);
+
+const hsv=(h,s,v)=>{h=((h%360)+360)%360;const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1))};return[f(5),f(3),f(1)]};
+const hsl=(h,s,l)=>{h=((h%360)+360)%360;const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return l-a*Math.max(-1,Math.min(k-3,9-k,1))};return[f(0),f(8),f(4)]};
+// 색상 하나로 4단계 램프. 어두울수록 파랑 쪽, 밝을수록 노랑 쪽으로 조금 옮긴다
+const hueRamp=(h,s=.7)=>[hsv(h+18,Math.min(1,s*1.05),.28),hsv(h+8,s,.5),hsv(h,s*.9,.75),hsv(h-12,s*.55,.97)];
+const gray=c=>{const v=lum(c);return[v,v,v]};
+function eqLum(h,s,target){let lo=0,hi=1;for(let i=0;i<20;i++){const m=(lo+hi)/2;lum(hsv(h,s,m))<target?lo=m:hi=m}return hsv(h,s,(lo+hi)/2)}
+
+// 배색 항목용 방: 벽, 바닥, 가구, 캐릭터, 강조(등불과 러그)
+function room(B,P,sw){const R=(c,t)=>{const[h,s,v]=c;return hsv(h-(t-.5)*24,Math.min(1,s*(1.15-.3*t)),Math.min(1,v*(.55+.7*t)))};
+  for(let y=0;y<28;y++)for(let x=0;x<N;x++){if(y<19){const row=Math.floor(y/4),lx=(x+(row%2)*3)%6;B.set(x,y,R(P.wall,(y%4===3||lx===5)?.3:.5))}else B.set(x,y,R(P.floor,x%7===0?.3:.5))}
+  for(let y=27;y>=24;y--)for(let x=14;x<=30;x++)if(inEll(x,y,22,25.5,8,2.2))B.set(x,y,R(P.accent,y===24?.7:.45));
+  for(let x=3;x<=13;x++){B.set(x,16,R(P.furn,.75));B.set(x,17,R(P.furn,.45))}for(let y=18;y<=23;y++){B.set(4,y,R(P.furn,.3));B.set(12,y,R(P.furn,.3))}
+  for(let y=12;y<=15;y++)for(let x=7;x<=9;x++)B.set(x,y,y===12?R(P.furn,.2):R(P.accent,(x===8&&y>12&&y<15)?1:.75));
+  ellipsoid(B,22,18,4,5,n=>R(P.char,litT(n)));B.set(20,17,hex('#141019'));B.set(23,17,hex('#141019'));
+  const cols=[P.wall,P.floor,P.furn,P.char,P.accent].map(c=>R(c,.5)),ws=sw||[6,6,7,6,7];let x=0;
+  for(let y=28;y<N;y++)for(let xx=0;xx<N;xx++)B.set(xx,y,hex('#ece8df'));
+  ws.forEach((w,i)=>{for(let y=29;y<N;y++)for(let k=0;k<w;k++)if(x+k<N)B.set(x+k,y,cols[i]);x+=w})}
+const RAND={wall:[200,.5,.7],floor:[30,.7,.6],furn:[120,.7,.6],char:[300,.6,.85],accent:[60,.9,.95]};
+const ANALOG={wall:[200,.4,.62],floor:[225,.45,.45],furn:[175,.45,.48],char:[190,.4,.88],accent:[155,.55,.9]};
+const COMP={wall:[210,.4,.55],floor:[220,.45,.4],furn:[200,.5,.45],char:[30,.6,.95],accent:[25,.9,1]};
+
+// 블렌드 모드: 바닥 장면 위에 둥근 색 층을 얹는다
+function blendCard(B,a,col,fn){tavern(B);blob(B,16,27,4,5);const C=hex(col);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const m=cl(1.15-Math.hypot(x+.5-16,y+.5-14)/12);if(!m)continue;const b=B.get(x,y);
+   B.set(x,y,a?mix(b,fn(b,C).map(cl),m):mix(b,C,m*.5))}}
+
+// 벽돌 높이: 줄눈은 0, 벽돌 가운데로 갈수록 높아진다
+const hB=(x,y)=>{x=Math.max(0,Math.min(N-1,x));y=Math.max(0,Math.min(N-1,y));const row=Math.floor(y/5),ly=y%5,lx=(x+(row%2)*4)%8;if(ly===4||lx===7)return 0;return Math.min(1,.45+.28*Math.min(lx,6-lx,ly,3-ly))};
+const nB=(x,y)=>norm([(hB(x-1,y)-hB(x+1,y))*2,(hB(x,y-1)-hB(x,y+1))*2,1]);
+const nColor=n=>[n[0]*.5+.5,-n[1]*.5+.5,n[2]*.5+.5];
+const vnoise=(x,y)=>{const x0=Math.floor(x),y0=Math.floor(y),sm=t=>t*t*(3-2*t),u=sm(x-x0),v=sm(y-y0),h=(i,j)=>hash(i+100,j+100);
+  const a=h(x0,y0),b=h(x0+1,y0),c=h(x0,y0+1),d=h(x0+1,y0+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v};
+const copyOf=B=>{const T=Buf();T.d.set(B.d);return T};
+const at=(T,x,y)=>T.get(Math.min(N-1,Math.max(0,x)),Math.min(N-1,Math.max(0,y)));
+// 깊이가 있는 산 장면: 색과 깊이(가까울수록 1)를 함께 돌려준다
+function layered(){const C=[],D=[],sky0=hex('#8ab8d0'),sky1=hex('#d8e8ee');for(let y=0;y<N;y++)for(let x=0;x<N;x++){C[y*N+x]=mix(sky0,sky1,y/31);D[y*N+x]=0}
+  const tops=[];[[12,3.2,.9,hex('#6a7a98'),.25],[17,4.5,1.7,hex('#465472'),.55],[23,2.6,1.1,hex('#232c40'),.9]].forEach(([h,fr,amp,col,dep],li)=>{
+   for(let x=0;x<N;x++){const top=Math.ceil(h+Math.sin(x/fr+li*2)*amp*2);if(li===1)tops[x]=top;for(let y=top;y<N;y++){let c=col;if(li===0&&y===top)c=mix(col,[1,1,1],.6);if(li===2&&(x+y)%3===0)c=mul(col,.8);C[y*N+x]=c;D[y*N+x]=dep}}
+   if(li===1){const base=tops[20];for(let y=base-6;y<base;y++)for(let x=18;x<=23;x++){const i=y*N+x;C[i]=y<base-4?hex('#5a2a2a'):(x===20&&y===base-2)?hex('#ffd070'):hex('#8a5a40');D[i]=dep}}});
+  return{C,D}}
+const putLayered=(B,f)=>{const{C,D}=layered();for(let i=0;i<N*N;i++)B.set(i%N,Math.floor(i/N),f?f(C,D,i):C[i])};
+
+const SKIN=hex('#f0c0a0'),SHIRT=hex('#3f6a93'),PANTS=hex('#4a3a5a'),HAIR=hex('#5a3020'),GND=hex('#cfc8b8');
+const ping=u=>u<.5?u*2:2-u*2,ss=u=>u*u*(3-2*u);
+function stage(B,g=29){fill(B,PAPER);const k=N/32;for(let y=Math.round(g*k);y<N;y++)for(let x=0;x<N;x++)B.set(x,y,GND)}
+function cap(B,x0,y0,x1,y1,r,c){const dx=x1-x0,dy=y1-y0,l2=dx*dx+dy*dy||1;
+  for(let y=Math.floor(Math.min(y0,y1)-r-1);y<=Math.ceil(Math.max(y0,y1)+r+1);y++)for(let x=Math.floor(Math.min(x0,x1)-r-1);x<=Math.ceil(Math.max(x0,x1)+r+1);x++){
+   const t=cl(((x+.5-x0)*dx+(y+.5-y0)*dy)/l2);if(Math.hypot(x+.5-x0-t*dx,y+.5-y0-t*dy)<=r)B.set(x,y,c)}}
+// 각도는 아래쪽이 0, 오른쪽(+x)으로 돌수록 양수
+function limb(B,x,y,a1,a2,l1,l2,r,c1,c2){const kx=x+Math.sin(a1)*l1,ky=y+Math.cos(a1)*l1,ex=kx+Math.sin(a1+a2)*l2,ey=ky+Math.cos(a1+a2)*l2;cap(B,x,y,kx,ky,r,c1);cap(B,kx,ky,ex,ey,r,c2||c1);return[x,y,kx,ky,ex,ey]}
+function ik(sx,sy,tx,ty,l1,l2,bend=1){const dx=tx-sx,dy=ty-sy,d=Math.min(Math.hypot(dx,dy),l1+l2-.01),a=Math.atan2(dy,dx),b=Math.acos(cl((l1*l1+d*d-l2*l2)/(2*l1*d))),
+  ex=sx+Math.cos(a-b*bend)*l1,ey=sy+Math.sin(a-b*bend)*l1,hx=sx+Math.cos(a)*d,hy=sy+Math.sin(a)*d;return[sx,sy,ex,ey,hx,hy]}
+function fig(B,p){const k=N/32,P=Object.assign({x:16,g:29,bob:0,lean:0,leg:5,aL:[.3,.4],aR:[-.3,.4],lL:[.12,0],lR:[-.12,0],bones:false,dim:false,face:true},p);
+  const hx=P.x*k,hy=(P.g-2*P.leg-P.bob)*k,sx=(P.x+P.lean)*k,sy=hy-8*k,J=[],C=c=>P.dim?mix(c,PAPER,.55):c,lg=P.leg*k;
+  J.push(P.lRj||limb(B,hx+.5*k,hy,P.lR[0],P.lR[1],lg,lg,1.1*k,C(mul(PANTS,.8))));J.push(limb(B,sx+.5*k,sy+k,P.aR[0],P.aR[1],4*k,4*k,.9*k,C(mul(SHIRT,.8)),C(mul(SKIN,.85))));
+  if(P.lRj){const j=P.lRj;cap(B,j[0],j[1],j[2],j[3],1.1*k,C(mul(PANTS,.8)));cap(B,j[2],j[3],j[4],j[5],1.1*k,C(mul(PANTS,.8)))}
+  cap(B,hx,hy,sx,sy,2.2*k,C(SHIRT));
+  if(P.lLj){const j=P.lLj;cap(B,j[0],j[1],j[2],j[3],1.1*k,C(PANTS));cap(B,j[2],j[3],j[4],j[5],1.1*k,C(PANTS));J.push(j)}else J.push(limb(B,hx-.5*k,hy,P.lL[0],P.lL[1],lg,lg,1.1*k,C(PANTS)));
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x+.5-sx,y+.5-(sy-4*k));if(d<=3.6*k)B.set(x,y,C(y+.5<sy-5.2*k?HAIR:SKIN))}
+  if(P.face)box(B,Math.round(sx+k),Math.round(sy-4*k),Math.round(sx+k)+Math.max(0,Math.round(k)-1),Math.round(sy-4*k)+Math.max(0,Math.round(k)-1),C(INK));
+  J.push(limb(B,sx-.5*k,sy+k,P.aL[0],P.aL[1],4*k,4*k,.9*k,C(SHIRT),C(SKIN)));
+  if(P.bones){const bc=hex('#e0a020'),jc=hex('#d83030'),ln=(a,b,c,d)=>line(B,Math.round(a),Math.round(b),Math.round(c),Math.round(d),bc);
+   ln(hx,hy,sx,sy);ln(sx,sy,sx,sy-4*k);J.forEach(j=>{ln(j[0],j[1],j[2],j[3]);ln(j[2],j[3],j[4],j[5])});
+   [[hx,hy],[sx,sy],[sx,sy-4*k],...J.flatMap(j=>[[j[2],j[3]],[j[4],j[5]]])].forEach(([x,y])=>box(B,Math.round(x)-(k>1?1:0),Math.round(y)-(k>1?1:0),Math.round(x),Math.round(y),jc))}
+  return{hx,hy,sx,sy}}
+const walk=(ph,amp)=>({lL:[amp*Math.sin(ph),-Math.max(0,Math.sin(ph+1.2))*amp*1.2],lR:[-amp*Math.sin(ph),-Math.max(0,-Math.sin(ph+1.2))*amp*1.2],
+  aL:[-amp*.9*Math.sin(ph),.5],aR:[amp*.9*Math.sin(ph),.5],bob:Math.abs(Math.cos(ph))*amp*1.3});
+function ghost(B,drawFn,tint,k){const T=Buf(),S=[-9,-9,-9];fill(T,S);drawFn(T);for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=T.get(x,y);if(c[0]!==-9)B.set(x,y,mix(B.get(x,y),mix(c,tint,.4),k))}}
+function face(B,eye,smile){fill(B,PAPER);const k=N/32;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x+.5-16*k,y+.5-17*k);if(d<=11*k)B.set(x,y,y<11*k?HAIR:SKIN)}
+  for(const ex of [11,20]){const h=Math.max(k,3*k*eye);box(B,ex*k,16*k-h/2,(ex+2)*k-1,16*k+h/2-1,INK)}
+  for(let i=0;i<=200;i++){const u=i/100-1,x=(16+u*4.5)*k,y=(21.5+smile*2.5*(1-u*u))*k;box(B,x-k/2,y-k/2,x+k/2-.01,y+k/2-.01,INK)}
+  if(smile>.5)for(const cx of [9,23])for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-cx*k,y+.5-20*k)<1.3*k)B.set(x,y,mix(SKIN,hex('#e07070'),.5))}
+
+const TERMS=[
+{kind:'공통',cat:'basic',ko:'키프레임',en:'Keyframe',lb:'키만',la:'키 사이를 채움',b:'주요 자세 세 장만',a:'사이 프레임이 이어 줌',anim:true,
+ d:'움직임에서 중요한 순간의 자세(시작, 정점, 끝)를 정해 둔 프레임입니다. 애니메이터는 키프레임을 먼저 잡고, 그 사이를 채워 움직임을 완성합니다.',
+ t:'주황 점이 키프레임 위치입니다. 키만 있으면 자세가 툭툭 바뀌고, 사이를 채워야 움직임이 됩니다.',
+ draw(B,a,f,s=0){stage(B);const K=[[6,22],[16,6],[26,22]],C=[2*K[1][0]-(K[0][0]+K[2][0])/2,2*K[1][1]-(K[0][1]+K[2][1])/2];
+  K.forEach(([x,y])=>{B.set(x,y+4,hex('#d08a2c'));B.set(x+1,y+4,hex('#d08a2c'))});const p=ping((s/2.4)%1);
+  let x,y;if(a){const q=ss(p);x=(1-q)**2*K[0][0]+2*(1-q)*q*C[0]+q*q*K[2][0];y=(1-q)**2*K[0][1]+2*(1-q)*q*C[1]+q*q*K[2][1]}else[x,y]=K[p<1/3?0:p<2/3?1:2];
+  sphere(B,x,y,3.2,n=>quant(BALL,litT(n)))}},
+{kind:'공통',cat:'basic',ko:'인비트윈, 트윈',en:'Inbetween / Tween',lb:'키 두 장',la:'사이 세 장 추가',b:'시작과 끝만',a:'흐린 공이 인비트윈',
+ d:'키프레임과 키프레임 사이를 채우는 프레임입니다. 손으로 그리면 인비트윈, 프로그램이 자동으로 계산하면 트윈이라고 부릅니다. 사이를 몇 장, 어떤 간격으로 넣느냐가 움직임의 느낌을 정합니다.',
+ draw(B,a){stage(B);const K=[[6,22],[16,6],[26,22]],C=[2*K[1][0]-(K[0][0]+K[2][0])/2,2*K[1][1]-(K[0][1]+K[2][1])/2],at=q=>[(1-q)**2*K[0][0]+2*(1-q)*q*C[0]+q*q*K[2][0],(1-q)**2*K[0][1]+2*(1-q)*q*C[1]+q*q*K[2][1]];
+  const qs=a?[0,.25,.5,.75,1]:[0,1];qs.forEach(q=>{const[x,y]=at(q),key=q===0||q===1;sphere(B,x,y,3.2,n=>{const c=quant(BALL,litT(n));return key?c:mix(c,PAPER,.55)})})}},
+{kind:'공통',cat:'basic',ko:'원스와 투스',en:'On Ones / On Twos',lb:'원스',la:'투스',b:'1초에 24장',a:'같은 그림을 두 프레임씩, 1초에 12장',anim:true,
+ d:'초당 24프레임 기준으로, 매 프레임 새 그림을 쓰는 것을 원스, 한 그림을 두 프레임씩 보여 주는 것을 투스라고 합니다. 투스는 그림 수가 절반이라 작업이 줄고, 손그림 특유의 또렷한 리듬이 생깁니다.',
+ t:'픽셀아트는 대부분 투스나 그보다 더 성기게(초당 8~12장) 만듭니다. 빠른 동작만 원스로 섞습니다.',
+ draw(B,a,f,s=0){stage(B);const t=Math.floor(s*(a?12:24))/(a?12:24),an=t*Math.PI;sphere(B,16+Math.cos(an)*10,15+Math.sin(an)*8,3.2,n=>quant(BALL,litT(n)))}},
+{kind:'공통',cat:'basic',ko:'타이밍과 스페이싱',en:'Timing & Spacing',lb:'고른 간격',la:'무게가 실린 간격',b:'떨어지는 공이 둥둥 뜸',a:'갈수록 간격이 넓어짐',
+ d:'타이밍은 동작에 프레임을 몇 장 쓰느냐, 스페이싱은 각 프레임 사이에 물체가 얼마나 움직이느냐입니다. 같은 7장이라도 간격을 어떻게 두느냐에 따라 가벼운 풍선이 되기도 하고 무거운 돌이 되기도 합니다.',
+ t:'흐린 공이 지나간 프레임입니다. 떨어지는 물체는 아래로 갈수록 간격이 넓어져야 무게가 느껴집니다.',
+ draw(B,a){stage(B);for(let i=0;i<7;i++){const u=i/6,y=4+20*(a?u*u:u),x=7+i*3,last=i===6;sphere(B,x,y,2.6,n=>{const c=quant(BALL,litT(n));return last?c:mix(c,PAPER,.5)})}}},
+{kind:'공통',cat:'basic',ko:'어니언 스킨',en:'Onion Skin',lb:'현재 프레임만',la:'어니언 스킨',b:'지금 그리는 프레임',a:'앞은 빨강, 뒤는 초록으로 겹쳐 봄',
+ d:'지금 그리는 프레임 뒤에 앞뒤 프레임을 반투명하게 겹쳐 보여 주는 작업 기능입니다. 이전 자세와 다음 자세를 보면서 그려서 움직임이 매끄럽게 이어집니다.',
+ t:'애니메이션 툴(Aseprite, 포토샵 타임라인 등)에 거의 다 들어 있습니다. 게임 화면에는 나오지 않는 작업용 표시입니다.',
+ draw(B,a){stage(B);if(a){ghost(B,T=>fig(T,Object.assign({x:14},walk(-.9,.55))),hex('#e04040'),.45);ghost(B,T=>fig(T,Object.assign({x:18},walk(.9,.55))),hex('#40b040'),.45)}fig(B,Object.assign({x:16},walk(0,.55)))}},
+{kind:'공통',cat:'basic',ko:'루프와 이음매',en:'Loop Seam',lb:'이음매 튐',la:'매끄러운 루프',b:'마지막에서 처음으로 툭 끊김',a:'끝과 처음이 이어짐',anim:true,
+ d:'반복 재생되는 애니메이션에서 마지막 프레임과 첫 프레임이 자연스럽게 이어지지 않아, 돌아갈 때마다 툭 튀는 현상입니다.',
+ t:'마지막 프레임은 첫 프레임 바로 앞 자세여야 합니다. 첫 프레임을 끝에 한 번 더 넣으면 같은 자세가 두 번 나와서 오히려 멈칫합니다.',
+ draw(B,a,f,s=0){stage(B);const u=(s/1.2)%1,o=a?Math.round(2+2*Math.sin(u*Math.PI*2)):Math.floor(u*5);ellipsoid(B,16,23-o,5,6,n=>quant(BALL,litT(n)));B.set(14,22-o,INK);B.set(17,22-o,INK)}},
+{kind:'공통',cat:'basic',ko:'무빙 홀드',en:'Moving Hold',lb:'완전 정지',la:'무빙 홀드',b:'자세가 굳어 버림',a:'자세는 유지하되 아주 조금 움직임',anim:true,
+ d:'자세를 잠깐 유지하는 동안에도 몸을 완전히 멈추지 않고 아주 조금씩 움직이게 하는 것입니다. 완전히 멈추면 캐릭터가 순간 인형처럼 굳어 보입니다.',
+ draw(B,a,f,s=0){stage(B);const k=a?Math.sin(s*1.6):0;fig(B,{bob:Math.round(k*.6+.3),aL:[-2.4+k*.08,.3],aR:[-.3,.4]})}},
+{kind:'공통',cat:'basic',ko:'애니메이션 커브, 그래프 에디터',en:'Animation Curve / Graph Editor',lb:'선형 커브',la:'베지어 커브',b:'처음부터 끝까지 같은 속도',a:'손잡이로 가감속을 조절',
+ d:'시간에 따라 값(위치, 회전 등)이 어떻게 변하는지를 그래프로 보여 주고 고치는 화면입니다. 가로는 시간, 세로는 값입니다. 곡선이 완만한 곳은 느리게, 가파른 곳은 빠르게 움직입니다.',
+ t:'오른쪽 양 끝의 짧은 선이 베지어 손잡이입니다. 손잡이를 길게 늘이면 가감속이 더 강해집니다.',
+ draw(B,a){fill(B,PAPER);for(let i=3;i<=28;i+=5)for(let j=3;j<=28;j++){B.set(i,j,hex('#e2ddd2'));B.set(j,i,hex('#e2ddd2'))}for(let j=3;j<=28;j++){B.set(3,j,hex('#8a8070'));B.set(j,28,hex('#8a8070'))}
+  for(let k=0;k<=200;k++){const u=k/200,v=a?ss(u):u;B.set(Math.round(3+u*25),Math.round(28-v*25),hex('#3f6a93'))}
+  if(a){for(let x=4;x<=10;x++){B.set(x,28,hex('#d08a2c'));B.set(31-x,3,hex('#d08a2c'))}B.set(10,27,hex('#d83030'));B.set(21,4,hex('#d83030'))}
+  B.set(3,28,hex('#d83030'));B.set(28,3,hex('#d83030'))}},
+
+{kind:'리깅',res:64,cat:'rig',ko:'본, 스켈레톤',en:'Bone / Skeleton',lb:'그림',la:'본 표시',b:'겉모습',a:'안쪽의 뼈대',
+ d:'캐릭터 안에 넣는 보이지 않는 뼈대입니다. 본 하나하나가 몸의 한 부분을 맡고, 본을 움직이면 그 부분의 그림이 따라 움직입니다. 본 전체를 스켈레톤이라고 부릅니다.',
+ t:'빨간 점이 관절, 노란 선이 본입니다.',
+ draw(B,a){stage(B);fig(B,{aL:[-.9,.6],aR:[.5,.4],lL:[.3,-.2],lR:[-.2,0],bones:a,dim:a})}},
+{kind:'리깅',cat:'rig',res:64,ko:'계층 구조, 부모와 자식',en:'Hierarchy / Parenting',lb:'연결 안 함',la:'부모와 자식으로 연결',b:'위팔만 돌고 아래팔은 그대로',a:'아래팔이 위팔을 따라감',anim:true,
+ d:'본끼리 부모와 자식 관계로 이어 두는 구조입니다. 부모 본(위팔)이 움직이면 자식 본(아래팔, 손)이 함께 따라 움직이고, 자식은 그 위에서 자기 움직임을 더합니다.',
+ draw(B,a,f,s=0){stage(B);const k=N/32,sx=9*k,sy=9*k,l=10*k,th=.4+Math.sin(s*1.8)*.9,ex=sx+Math.sin(th+.9)*l,ey=sy+Math.cos(th+.9)*l,e0x=sx+Math.sin(1.3)*l,e0y=sy+Math.cos(1.3)*l,px=a?ex:e0x,py=a?ey:e0y,pa=a?th+.3:.7;
+  cap(B,px,py,px+Math.sin(pa)*9*k,py+Math.cos(pa)*9*k,1.5*k,SKIN);cap(B,sx,sy,ex,ey,1.8*k,SHIRT);for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-sx,y+.5-sy)<2.6*k)B.set(x,y,hex('#2a3a5a'));
+  box(B,px-.5*k,py-.5*k,px+.5*k,py+.5*k,hex('#e0a020'))}},
+{kind:'리깅',cat:'rig',res:64,ko:'FK와 IK',en:'Forward / Inverse Kinematics',lb:'FK',la:'IK',b:'관절 각도를 하나씩 돌림',a:'손 위치를 정하면 관절이 따라옴',anim:true,
+ d:'FK(정운동학)는 어깨, 팔꿈치 순서로 관절 각도를 하나씩 돌려 자세를 만드는 방식입니다. IK(역운동학)는 손이나 발 같은 끝 위치를 먼저 정하면 중간 관절 각도를 프로그램이 거꾸로 계산하는 방식입니다.',
+ t:'휘두르기처럼 호를 그리는 동작은 FK가, 물건 잡기나 땅 짚기처럼 끝이 한곳에 고정돼야 하는 동작은 IK가 편합니다. 오른쪽의 빨간 표시가 IK 목표점입니다.',
+ draw(B,a,f,s=0){stage(B);const k=N/32,sx=8*k,sy=8*k,l=9.5*k;let J;
+  if(a){const tx=(20+5*Math.cos(s*1.3))*k,ty=(18+5*Math.sin(s*1.3))*k;J=ik(sx,sy,tx,ty,l,l,-1);box(B,tx-2*k,ty-.5*k,tx+2*k,ty+.5*k-1,hex('#d83030'));box(B,tx-.5*k,ty-2*k,tx+.5*k-1,ty+2*k,hex('#d83030'))}
+  else{const a1=Math.sin(s*1.1)*.7,a2=.3+Math.sin(s*1.7+1)*.6;J=[sx,sy,sx+Math.cos(a1)*l,sy+Math.sin(a1)*l,0,0];J[4]=J[2]+Math.cos(a1+a2)*l;J[5]=J[3]+Math.sin(a1+a2)*l}
+  cap(B,J[2],J[3],J[4],J[5],1.4*k,SKIN);cap(B,J[0],J[1],J[2],J[3],1.7*k,SHIRT);for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-sx,y+.5-sy)<2.4*k)B.set(x,y,hex('#2a3a5a'));
+  [[J[2],J[3]]].forEach(([x,y])=>box(B,x-.5*k,y-.5*k,x+.5*k,y+.5*k,hex('#e0a020')))}},
+{kind:'리깅',cat:'rig',res:64,ko:'발 IK, 지면 맞추기',en:'Foot IK',lb:'다리를 그대로 둠',la:'발 IK',b:'한쪽 발이 계단 속에 박힘',a:'무릎을 굽혀 계단을 디딤',
+ d:'바닥 높이가 다른 곳에 서 있을 때, 발 위치를 바닥에 맞추고 무릎 각도를 IK로 다시 계산하는 것입니다. 계단, 경사, 울퉁불퉁한 지형에서 발이 뜨거나 땅에 박히지 않게 합니다.',
+ draw(B,a){const k=N/32;fill(B,PAPER);box(B,0,29*k,N-1,N-1,GND);const step=()=>{box(B,17*k,25*k,N-1,N-1,mul(GND,.85));box(B,17*k,25*k,N-1,25*k+k-1,mul(GND,.7))};
+  if(!a){step();fig(B,{x:16,lL:[.15,0],lR:[-.15,0]});box(B,17*k,25.5*k,N-1,N-1,mul(GND,.85));return}
+  step();fig(B,{x:16,lLj:ik(15.5*k,19*k,18.5*k,25*k,5*k,5*k,1),lRj:ik(16.5*k,19*k,14*k,29*k,5*k,5*k,1)})}},
+{kind:'리깅',cat:'rig',res:64,ko:'스키닝과 웨이트',en:'Skinning & Weights',lb:'웨이트 0 또는 1',la:'부드러운 웨이트',b:'관절이 꺾이며 찢어짐',a:'관절 주변이 부드럽게 휨',anim:true,
+ d:'그림(메시)의 각 점이 어느 본을 얼마나 따라갈지 정하는 것을 스키닝, 그 비율을 웨이트라고 합니다. 관절 근처 점을 두 본에 나눠 붙이면 팔꿈치가 고무처럼 부드럽게 휩니다.',
+ t:'웨이트를 너무 넓게 퍼뜨리면 관절이 물렁하게 늘어지니, 관절 바로 주변에만 섞습니다.',
+ draw(B,a,f,s=0){stage(B);const k=N/32,th=(.5+.5*Math.sin(s*1.5))*1.3,co=Math.cos(-th),si=Math.sin(-th),C=[mul(SHIRT,.7),SHIRT,mix(SHIRT,[1,1,1],.35)];
+  for(let u=0;u<=22;u+=.12)for(let v=-3.5;v<=3.5;v+=.12){const px=5+u,py=18+v,rx=16+(px-16)*co-(py-18)*si,ry=18+(px-16)*si+(py-18)*co,w=a?ss(cl((u-7)/8)):(u<11?0:1);
+   B.set(Math.round((px+(rx-px)*w)*k),Math.round((py+(ry-py)*w)*k),(u%4)<.25?mul(C[1],.8):C[v>1.8?2:v<-1.8?0:1])}}},
+{kind:'리깅',cat:'rig',res:64,ko:'피벗, 회전 중심',en:'Pivot',lb:'가운데 피벗',la:'어깨 피벗',b:'팔이 가운데를 축으로 돎',a:'팔이 어깨에서 돎',anim:true,
+ d:'부품이 회전하고 크기가 바뀔 때 기준이 되는 점입니다. 팔의 피벗이 그림 한가운데에 있으면 팔이 어깨에서 빠져 프로펠러처럼 돕니다. 컷아웃과 본 애니메이션에서 가장 먼저 잡는 값입니다.',
+ t:'빨간 점이 피벗입니다.',
+ draw(B,a,f,s=0){stage(B);const k=N/32;box(B,10*k,6*k,15*k,26*k,mul(SHIRT,.9));for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-12.5*k,y+.5-3*k)<3*k)B.set(x,y,SKIN);
+  const th=Math.sin(s*2)*.9,px=16,py=a?8:14,co=Math.cos(th),si=Math.sin(th);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5)/k-px,dy=(y+.5)/k-py,lx=dx*co+dy*si,ly=-dx*si+dy*co+(py-8);if(lx>=-1.6&&lx<=1.6&&ly>=0&&ly<=12)B.set(x,y,ly>9?SKIN:SHIRT)}
+  box(B,px*k-1,py*k-1,px*k,py*k,hex('#d83030'))}},
+{kind:'리깅',cat:'rig',ko:'메시 변형',en:'Mesh Deformation',lb:'통이미지 회전',la:'메시 변형',b:'깃발이 판자처럼 기울어짐',a:'깃발이 천처럼 휘어짐',anim:true,
+ d:'그림 위에 격자(메시)를 씌우고 그 점들을 움직여 그림 자체를 휘게 만드는 방식입니다. 깃발, 망토, 머리카락, 살짝 숨 쉬는 몸통처럼 통째로 돌리면 어색한 부분에 씁니다.',
+ t:'Spine, DragonBones 같은 2D 리깅 툴의 핵심 기능입니다.',
+ draw(B,a,f,s=0){stage(B);for(let y=3;y<29;y++){B.set(5,y,hex('#5a3820'));B.set(6,y,hex('#7a5030'))}const rot=a?0:Math.sin(s*2)*.12;
+  for(let u=0;u<20;u+=.4)for(let v=0;v<11;v+=.4){const c=(Math.floor(u/4)+Math.floor(v/4))%2?hex('#c03838'):hex('#e8c050'),wv=a?Math.sin(u*.35-s*4)*u/20*2.6:0;
+   const x=7+u*Math.cos(rot)-v*Math.sin(rot),y=4+v+u*Math.sin(rot)+wv;B.set(Math.round(x),Math.round(y),c)}}},
+{kind:'리깅',cat:'rig',ko:'컷아웃 애니메이션',en:'Cutout Animation',lb:'조각',la:'조립해서 움직임',b:'부위별로 나눈 그림',a:'조각을 돌려 동작을 만듦',anim:true,
+ d:'캐릭터를 머리, 몸통, 팔, 다리 같은 조각으로 나눠 그린 뒤, 조각을 옮기고 돌려서 움직이는 방식입니다. 그림을 한 번만 그리면 되니 동작을 많이 만들기 쉽습니다.',
+ t:'조각이 맞닿는 관절 부분은 조금 겹치게 그려야 돌렸을 때 틈이 안 보입니다.',
+ draw(B,a,f,s=0){stage(B);if(!a){for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.hypot(x+.5-6,y+.5-6)<=3.6)B.set(x,y,y<4.8?HAIR:SKIN);B.set(7,6,INK);
+   cap(B,16,3,16,10,2.2,SHIRT);cap(B,24,3,24,7,.9,SHIRT);cap(B,24,8,24,12,.9,SKIN);cap(B,28,3,28,7,.9,mul(SHIRT,.8));cap(B,28,8,28,12,.9,mul(SKIN,.85));
+   cap(B,8,16,8,21,1.1,PANTS);cap(B,8,22,8,27,1.1,PANTS);cap(B,13,16,13,21,1.1,mul(PANTS,.8));cap(B,13,22,13,27,1.1,mul(PANTS,.8));return}
+  const k=Math.sin(s*3);fig(B,{aL:[-2.3+k*.4,.4+k*.2],aR:[-.3,.4],lL:[.12,0],lR:[-.12,0]})}},
+
+{kind:'리깅',cat:'blend',ko:'애니메이션 블렌딩, 크로스페이드',en:'Animation Blending / Crossfade',lb:'바로 전환',la:'크로스페이드',b:'걷기에서 뛰기로 자세가 툭 바뀜',a:'두 동작을 섞으며 넘어감',anim:true,
+ d:'한 동작에서 다른 동작으로 넘어갈 때 두 동작의 자세를 잠깐 섞어서 이어 주는 것입니다. 섞는 시간 없이 바로 바꾸면 그 순간 자세가 툭 튑니다.',
+ t:'보통 0.1~0.3초 정도 섞습니다. 너무 길면 동작이 흐물흐물해 보입니다.',
+ draw(B,a,f,s=0){stage(B);const st=Math.floor(s/2)%2,u=(s%2),k0=st?1:0,k=a?(u<.5?mix([1-k0],[k0],ss(u/.5))[0]:k0):k0,amp=.35+.5*k,P=walk(s*7,amp);P.lean=k*1.6;fig(B,P)}},
+{kind:'리깅',cat:'blend',ko:'블렌드 트리',en:'Blend Tree',lb:'가장 가까운 동작',la:'블렌드 트리',b:'속도가 바뀌어도 동작이 뚝뚝 바뀜',a:'속도에 맞춰 동작이 섞임',anim:true,
+ d:'속도 같은 값 하나(또는 둘)에 따라 여러 동작을 비율대로 섞어 주는 구조입니다. 서기, 걷기, 뛰기를 속도 0, 0.5, 1에 두면 그 사이 속도에서는 두 동작이 알맞게 섞입니다.',
+ t:'아래 막대가 속도이고, 눈금 세 개가 서기, 걷기, 뛰기 위치입니다.',
+ draw(B,a,f,s=0){stage(B,27);const m=.5-.5*Math.cos(s*.8),v=a?m:Math.round(m*2)/2,amp=v*.9,P=walk(s*7,amp);P.g=27;P.lean=v*1.6;fig(B,P);
+  for(let x=4;x<=27;x++)B.set(x,30,hex('#8a8070'));[4,15,27].forEach(x=>{B.set(x,29,hex('#8a8070'));B.set(x,31,hex('#8a8070'))});const mx=Math.round(4+m*23);B.set(mx,29,hex('#d08a2c'));B.set(mx,30,hex('#d08a2c'));B.set(mx,31,hex('#d08a2c'))}},
+{kind:'공통',cat:'blend',res:64,ko:'애니메이션 상태 머신',en:'Animation State Machine',lb:'모두 연결',la:'정리된 상태 머신',b:'모든 동작이 서로 이어져 얽힘',a:'서기를 중심으로 필요한 길만',
+ d:'서기, 걷기, 뛰기, 점프 같은 동작을 상태로 두고, 어떤 조건에서 어느 상태로 넘어갈지를 선으로 정한 구조입니다. 지금 어떤 동작을 재생할지 엔진이 이 표를 보고 정합니다.',
+ t:'모든 상태를 서로 다 이으면 전환이 꼬여서 고치기 어려워집니다. 중심 상태 하나로 모으면 관리가 쉽습니다. 파랑이 서기, 초록이 걷기, 주황이 뛰기, 빨강이 점프입니다.',
+ draw(B,a){fill(B,PAPER);const k=N/32,Nd=[[16,16,hex('#3f6a93')],[5,6,hex('#40a050')],[27,6,hex('#d08a2c')],[16,27,hex('#c04040')]],E=a?[[0,1],[0,2],[0,3],[1,2]]:[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+  E.forEach(([i,j])=>{const[x0,y0]=Nd[i],[x1,y1]=Nd[j];for(let q=0;q<=100;q++){const x=(x0+(x1-x0)*q/100)*k,y=(y0+(y1-y0)*q/100)*k;box(B,x-.4*k,y-.4*k,x+.4*k-1,y+.4*k-1,hex('#8a8070'))}});
+  Nd.forEach(([x,y,c])=>{box(B,(x-2.5)*k,(y-2.5)*k,(x+2.5)*k,(y+2.5)*k,mul(c,.6));box(B,(x-2)*k,(y-2)*k,(x+2)*k,(y+2)*k,c)})}},
+{kind:'리깅',cat:'blend',ko:'애니메이션 레이어, 마스크',en:'Animation Layers / Avatar Mask',lb:'레이어 하나',la:'상체 레이어 추가',b:'걸으면 팔도 걷는 동작만',a:'다리는 걷고 팔은 손을 흔듦',anim:true,
+ d:'몸의 일부에만 적용되는 동작을 따로 층으로 얹는 기능입니다. 하체는 걷기 레이어, 상체는 손 흔들기 레이어처럼 나누면 동작을 일일이 조합해서 만들지 않아도 됩니다. 어느 부위에 적용할지는 마스크로 정합니다.',
+ draw(B,a,f,s=0){stage(B);const P=walk(s*6,.5);if(a)P.aL=[-2.5+Math.sin(s*5)*.35,.5];fig(B,P)}},
+{kind:'리깅',cat:'blend',res:64,ko:'루트 모션',en:'Root Motion',lb:'제자리 동작',la:'루트 모션',b:'몸만 앞서가다 원래 자리로 돌아감',a:'동작이 실제 위치를 함께 옮김',anim:true,
+ d:'동작 안에 들어 있는 이동량을 캐릭터의 실제 위치(루트) 이동으로 쓰는 방식입니다. 쓰지 않으면 그림만 앞으로 걸어 나갔다가, 동작이 반복될 때마다 실제 위치로 순간 이동하듯 되돌아갑니다.',
+ t:'주황 마름모가 캐릭터의 실제 위치(루트)입니다. 반대로 이동은 코드로 하고 동작은 제자리에서 걷는 방식(인플레이스)도 많이 씁니다. 둘 중 하나로 정해서 섞지 않습니다.',
+ draw(B,a,f,s=0){stage(B);const k=N/32;for(let x=0;x<32;x+=4)box(B,x*k,30*k,x*k+k-1,30*k+k-1,mul(GND,.8));
+  const u=(s/1.6)%1,root=a?4+((s/1.6)*12)%24:7,cx=a?root:7+u*12;
+  if(!a)for(let x=root;x<cx;x+=1.5)box(B,x*k,29.2*k,x*k+.6*k,29.2*k+.5*k,hex('#d08a2c'));
+  const P=walk(s*7.8,.5);P.x=cx;fig(B,P);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=Math.abs((x+.5)/k-root),dy=Math.abs((y+.5)/k-30.8);if(dx+dy<1.2)B.set(x,y,hex('#d08a2c'))}}},
+{kind:'리깅',cat:'blend',ko:'발 미끄러짐',en:'Foot Sliding',lb:'발 미끄러짐',la:'발 고정',b:'몸 속도와 걸음이 안 맞음',a:'디딘 발이 땅에 붙어 있음',anim:true,
+ d:'캐릭터가 이동하는 속도와 걷는 동작의 보폭이 맞지 않아, 땅을 디딘 발이 얼음 위처럼 미끄러지는 현상입니다. 루트 모션을 쓰거나 이동 속도에 맞춰 동작 재생 속도를 조절해서 고칩니다.',
+ draw(B,a,f,s=0){stage(B);for(let x=0;x<N;x+=4)B.set(x,30,mul(GND,.8));const T=.9,S=8,v=S/T,bx=s*v,W=v_=>((v_%26)+26)%26+3,foot=off=>{const t=s+off*T,k=Math.floor(t/T),u=t/T-k,p0=k*S+S*.25-off*S;return u<.5?p0:p0+(u-.5)/.5*S};
+  const fs=a?[foot(0),foot(.5)]:[bx+Math.sin(s/T*Math.PI*2)*S*.3*1.6/1.6,bx-Math.sin(s/T*Math.PI*2)*S*.3],hb=a?bx:bx*1.6;
+  const hx=W(hb),f2=fs.map(fx=>hx+((a?fx-bx:fx-bx)));f2.forEach((fx,i)=>{cap(B,hx,20,fx,28,1.1,i?mul(PANTS,.8):PANTS);B.set(Math.round(fx)+1,28,INK)});
+  ellipsoid(B,hx,15,4,5,n=>quant(BALL,litT(n)));B.set(Math.round(hx)+1,14,INK)}},
+{kind:'리깅',cat:'blend',ko:'리타기팅, 리타겟팅',en:'Retargeting',lb:'그대로 복사',la:'리타기팅',b:'작은 캐릭터 발이 공중에 뜸',a:'몸 크기에 맞게 다시 맞춤',
+ d:'한 캐릭터용으로 만든 동작을 체형이 다른 캐릭터에 옮겨 쓰는 것입니다. 리타겟팅이라고도 씁니다. 관절 위치를 그대로 복사하면 다리가 짧은 캐릭터는 발이 뜨고, 긴 캐릭터는 땅에 박힙니다. 리타기팅은 본 길이 차이에 맞게 동작을 고쳐서 옮깁니다.',
+ draw(B,a){stage(B);fig(B,{x:9});fig(B,{x:23,leg:3,bob:a?0:4})}},
+{kind:'공통',cat:'blend',ko:'애니메이션 이벤트',en:'Animation Event',lb:'이벤트 없음',la:'발소리 이벤트',b:'걷기만 함',a:'발이 닿는 프레임에 먼지',anim:true,
+ d:'동작의 특정 프레임에 "여기서 발소리", "여기서 타격 판정"처럼 신호를 심어 두는 기능입니다. 소리, 이펙트, 판정이 그림과 정확히 맞아떨어집니다.',
+ draw(B,a,f,s=0){stage(B);const ph=s*6;fig(B,walk(ph,.55));if(!a)return;const c=Math.cos(ph),age=((ph/Math.PI+.5)%1);if(age<.35){const r=1+age*8,dir=Math.floor(ph/Math.PI+.5)%2?1:-1;
+  for(let i=-1;i<=1;i++)B.set(Math.round(16+dir*3+i*r*.6),28-Math.round(age*3),mix(hex('#a89e8a'),PAPER,age*2))}}},
+
+{kind:'비교',cat:'method',ko:'스프라이트 애니메이션과 리깅 애니메이션',en:'Sprite (Frame) vs Rigged (Skeletal) Animation',lb:'스프라이트 애니메이션',la:'리깅 애니메이션',b:'손으로 그린 세 장',a:'본을 돌려 매끄럽게',anim:true,
+ d:'스프라이트 애니메이션(프레임 애니메이션)은 자세마다 그림을 한 장씩 그려서 넘기는 방식입니다. 리깅 애니메이션(본 애니메이션, 스켈레탈 애니메이션)은 그림 한 벌에 본을 심고 본을 움직여 동작을 만드는 방식입니다. 스프라이트 방식은 표현이 자유롭지만 그림이 많이 들고, 리깅 방식은 동작을 쉽게 늘릴 수 있지만 크게 돌아가는 동작에서 그림이 늘어나 보입니다.',
+ t:'픽셀아트는 본으로 돌리면 픽셀이 깨지기 쉬워서(1편 회전 깨짐), 하이레스 렌더링과 함께 쓰거나 중요한 동작만 손으로 그리는 경우가 많습니다.',
+ draw(B,a,f,s=0){stage(B);const ang=a?-2.6+Math.sin(s*4)*.4:[-2.2,-2.6,-3.0,-2.6][Math.floor(s*5)%4];fig(B,{aL:[ang,.4]})}},
+{kind:'리깅',cat:'method',ko:'파츠 교체, 스프라이트 스왑',en:'Sprite Swap',lb:'파츠 고정',la:'파츠 교체',b:'표정이 하나뿐',a:'눈과 입 그림을 바꿔 끼움',anim:true,
+ d:'리그의 본은 그대로 두고 눈, 입, 손 모양 같은 부품 그림만 다른 그림으로 바꿔 끼우는 방식입니다. 여기서 스프라이트는 리그에 붙은 부품 그림 한 장을 말합니다. 컷아웃이나 리깅 애니메이션에서 표정과 손 모양을 바꿀 때 씁니다.',
+ draw(B,a,f,s=0){const k=a?Math.floor(s*1.2)%3:0;face(B,k===1?0:1,k===2?1:0)}},
+{kind:'리깅',cat:'method',tag:'3D 전용',res:96,ko:'모프 타깃, 블렌드 셰이프',en:'Morph Target / Blend Shape',lb:'파츠 교체',la:'모프 타깃',b:'무표정과 웃음이 툭 바뀜',a:'두 모양 사이를 부드럽게 섞음',anim:true,
+ d:'같은 얼굴 모델의 변형된 모양(웃음, 눈 감기 등)을 미리 만들어 두고, 원래 모양과 섞는 비율을 0에서 1까지 조절하는 방식입니다. 3D 캐릭터 표정 애니메이션의 기본입니다.',
+ t:'2D에서는 메시 변형이나 파츠 교체로 같은 효과를 냅니다.',
+ draw(B,a,f,s=0){const w=.5-.5*Math.cos(s*1.6);face(B,1,a?w:(w>.5?1:0))}}
+];
+
+
+function blit(cv,B){const n=B.n,ctx=cv.getContext('2d'),im=ctx.createImageData(n,n);for(let i=0;i<n*n;i++){for(let k=0;k<3;k++)im.data[i*4+k]=Math.round(cl(B.d[i*3+k])*255);im.data[i*4+3]=255}ctx.putImageData(im,0,0)}
+function render(cv,t,a,f=.5,s=0){if(t.paint)return t.paint(cv,a,s);N=t.res||32;try{const B=Buf();t.draw(B,a,f,s);blit(cv,B)}finally{N=32}}
+
+const nav=document.getElementById('nav'),main=document.getElementById('main'),anims=[];
+CATS.forEach(c=>{
+  const a=document.createElement('a');a.href='#'+c.id;a.textContent=c.name;nav.appendChild(a);
+  const sec=document.createElement('section');sec.id=c.id;
+  sec.innerHTML=`<h2>${c.name}<small>${c.en}</small></h2><div class="grid"></div>`;
+  const grid=sec.querySelector('.grid');
+  TERMS.filter(t=>t.cat===c.id).forEach(t=>{
+    const card=document.createElement('article');card.className='card';
+    card.innerHTML=`<h3>${t.ko}${[t.kind,t.tag].filter(Boolean).map(x=>'<span class="badge">'+x+'</span>').join('')}<span class="en">${t.en}</span></h3>
+      <div class="pair"><figure><canvas width="${t.paint?128:(t.res||32)}" height="${t.paint?128:(t.res||32)}" role="img" aria-label="${t.ko} 적용 전"></canvas><figcaption><b>${t.lb||'BEFORE'}</b>${t.b}</figcaption></figure>
+      <figure class="after"><canvas width="${t.paint?128:(t.res||32)}" height="${t.paint?128:(t.res||32)}" role="img" aria-label="${t.ko} 적용 후"></canvas><figcaption><b>${t.la||'AFTER'}</b>${t.a}</figcaption></figure></div>
+      <p>${t.d}</p>${t.t?`<p class="tip"><strong>픽셀아트에서는</strong> ${t.t}</p>`:''}`;
+    const [c0,c1]=card.querySelectorAll('canvas');render(c0,t,false);render(c1,t,true);
+    if(t.anim)anims.push([c0,c1,t]);
+    grid.appendChild(card)});
+  main.appendChild(sec)});
+
+if(anims.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const loop=ts=>{const f=.5-.5*Math.cos(ts/1800*Math.PI*2);anims.forEach(([c0,c1,t])=>{render(c0,t,false,f,ts/1000);render(c1,t,true,f,ts/1000)});requestAnimationFrame(loop)};
+  requestAnimationFrame(loop)}
+</script>
+</body>
+</html>
