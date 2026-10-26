@@ -283,11 +283,15 @@ const TERMS=[
 {cat:'map',ko:'AO 맵',en:'Ambient Occlusion Map',lb:'스프라이트',la:'AO 맵',b:'벽돌 텍스처',a:'틈이 어두움',
  d:'주변광이 덜 드는 오목한 곳을 미리 어둡게 계산해 둔 흑백 텍스처입니다. 기본 색 위에 곱하기로 얹으면 틈과 모서리에 깊이가 생깁니다.',
  draw(B,a){bricks(B,false,false);if(a)for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=cl(.3+hB(x,y)*1.05);B.set(x,y,[v,v,v])}}},
-{cat:'map',res:64,ko:'러프니스 맵, 스페큘러 맵',en:'Roughness / Specular Map',lb:'맵 없음',la:'러프니스 맵',b:'나무까지 플라스틱처럼 반짝임',a:'금속 띠만 반짝임',anim:true,
+{cat:'map',res:64,ko:'러프니스 맵, 스페큘러 맵',en:'Roughness / Specular Map',lb:'맵 없음',la:'러프니스 맵',b:'나무까지 플라스틱처럼 반짝임',a:'쇠테만 반짝이고 나무는 무광',anim:true,
  d:'표면이 얼마나 거친지 흑백으로 저장한 텍스처입니다. 매끈한 곳은 하이라이트가 작고 선명하게, 거친 곳은 흐리거나 아예 없게 나옵니다. 반대로 얼마나 반짝이는지를 저장하는 스페큘러 맵, 글로시니스 맵도 같은 역할입니다.',
  t:'빛이 좌우로 움직일 때 하이라이트가 어디를 지나가는지 보면 차이가 잘 보입니다. 나무 통에 두른 쇠테처럼 한 물체 안에 재질이 섞여 있을 때 맵 하나로 광택을 나눌 수 있습니다.',
- draw(B,a,f,s=0){const k=N/32;fill(B,PAPER);ground(B,Math.round(27*k));const W=['#3a2418','#6a4028','#9a6a40','#c89a60'].map(hex),M=['#3a3020','#7a6a40','#c8b070','#fff0c0'].map(hex),Ld=norm([Math.sin(s*1.1)*.85,-.55,.6]),Hd=norm([Ld[0],Ld[1],Ld[2]+1]);
-  sphere(B,16*k,15*k,10.5*k,(n,x,y)=>{const Y=(y+.5)/k,metal=(Y>=10&&Y<12)||(Y>=19&&Y<21),sp=dot(n,Hd);if((!a||metal)&&sp>.975)return hex('#ffffff');if((!a||metal)&&sp>.94)return mix(quant(metal?M:W,litWith(n,Ld)),[1,1,1],.5);return quant(metal?M:W,litWith(n,Ld))})}},
+ draw(B,a,f,s=0){const k=N/32;fill(B,hex('#e2ddd2'));ground(B,Math.round(27*k));const Ld=norm([Math.sin(s*1.1)*.85,-.55,.6]),Hd=norm([Ld[0],Ld[1],Ld[2]+1]);
+  const W=['#2a1810','#4a2c1a','#6a4024','#82522e'].map(hex),M=['#24242c','#4a4a58','#8a8a9a','#c8c8d8'].map(hex);
+  sphere(B,16*k,15*k,10.5*k,(n,x,y)=>{const Y=(y+.5)/k,metal=(Y>=9&&Y<11.5)||(Y>=18.5&&Y<21),t=litWith(n,Ld),sp=dot(n,Hd);
+   if(metal){let c=quant(M,t);if(sp>.97)c=hex('#ffffff');else if(sp>.9)c=mix(c,[1,1,1],.55);return c}
+   const stave=Math.abs(((n[0]*5+5)%1)-.5)<.07,grain=hash(Math.floor(n[0]*40),Math.floor(Y*3))*.12;let c=quant(W,t).map(v=>v*(.94+grain));if(stave)c=mul(c,.7);
+   if(!a){if(sp>.97)c=hex('#fff6e8');else if(sp>.9)c=mix(c,[1,1,1],.5)}return c})}},
 {cat:'map',ko:'이미시브 맵',en:'Emissive Map',lb:'맵 없음',la:'이미시브 맵',b:'어두운 벽의 문양',a:'문양만 빛남',
  d:'스스로 빛나는 부분만 따로 표시한 텍스처입니다. 조명이 없어도 이 부분은 항상 밝게 그려지고, 블룸과 함께 쓰면 빛이 번집니다.',
  t:'마법진, 눈빛, 화면, 네온사인처럼 어두운 장면에서도 보여야 하는 곳에 씁니다.',
