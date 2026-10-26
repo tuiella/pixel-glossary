@@ -530,7 +530,7 @@ const TERMS=[
  draw(B,a,f,s=0){stage(B);const k=N/32,th=s*.9,co=Math.cos(th),si=Math.sin(th),Lc=a?18:1;
   for(let l=0;l<Lc;l++){const roof=l>=11,hw=(roof?5.5-(l-11)*.75:6)*k,col=roof?mul(hex('#c04a3a'),.72+l*.016):mul(hex('#c8a070'),.68+l*.03);
    for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-16*k,dy=(y+.5-(21*k-(a?l:6)))*1.6,lx=dx*co+dy*si,ly=-dx*si+dy*co;if(Math.abs(lx)<=hw&&Math.abs(ly)<=hw*.8)B.set(x,y,!a?hex('#c04a3a'):(!roof&&l>=1&&l<=6&&lx>hw-1.5*k&&Math.abs(ly)<1.6*k)?hex('#5a3020'):col)}}}},
-{cat:'twod',res:64,ko:'시스루, 실루엣 표시',en:'See-through / X-ray Silhouette',lb:'가려짐',la:'시스루',b:'기둥 뒤로 가면 캐릭터가 사라짐',a:'기둥 너머로 실루엣이 비침',anim:true,
+{cat:'twod',res:64,ko:'시스루, 엑스레이 실루엣',en:'See-through / X-ray Silhouette',lb:'가려짐',la:'시스루',b:'기둥 뒤로 가면 캐릭터가 사라짐',a:'기둥 너머로 실루엣이 비침',anim:true,
  d:'캐릭터가 벽이나 기둥 같은 물체 뒤에 가려졌을 때, 가려진 부분을 실루엣이나 외곽선으로 비쳐 보이게 하는 표현입니다. 플레이어가 자기 캐릭터 위치를 놓치지 않게 해 줍니다.',
  t:'가려진 픽셀만 골라 다른 색으로 그리는 셰이더(깊이 테스트를 반대로 쓰는 방식)를 많이 씁니다. 반대로 캐릭터 앞의 벽을 반투명하게 만들거나 디더로 구멍을 내서 보이게 하는 방식도 있습니다.',
  draw(B,a,f,s=0){const k=N/32;up32(B,T=>{bricks(T,true,false);for(let y=24;y<32;y++)for(let x=0;x<32;x++)T.set(x,y,(x+y)%6===0?hex('#4e3b30'):FLOOR)});
