@@ -26,6 +26,7 @@ nav a:hover,nav a:focus-visible{border-color:var(--accent);outline:none}
 h2{font-family:var(--display);font-weight:400;font-size:28px;margin:48px 0 16px;display:flex;align-items:baseline;gap:12px}
 h2 small{font-family:var(--pixel);font-size:13px;color:var(--muted);letter-spacing:.06em}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.series{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}.series a{font-size:12px;padding:4px 10px;border-radius:4px;border:1px solid var(--line);color:var(--muted);text-decoration:none;background:var(--surface)}.series a:hover,.series a:focus-visible{border-color:var(--accent);color:var(--fg);outline:none}.series a[aria-current]{color:var(--fg);border-color:var(--accent);font-weight:600}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .card h3{margin:0;font-size:18px;font-weight:600;line-height:1.3}
 .card h3 .en{display:block;font-family:var(--pixel);font-weight:400;font-size:12px;color:var(--muted);letter-spacing:.04em;margin-top:2px}
@@ -46,6 +47,7 @@ footer{margin-top:56px;color:var(--muted);font-size:13px}
 
 <div class="wrap">
 <header>
+<nav class="series" aria-label="용어집 시리즈"><a href="https://tuiella.github.io/pixel-glossary/" aria-current="page">1편 픽셀 셰이딩</a><a href="https://tuiella.github.io/pixel-glossary/color/">2편 색 표현</a></nav>
   <h1>픽셀 셰이딩 용어집</h1>
   <p>렌더링과 픽셀아트에서 자주 나오는 용어를 32×32 픽셀 장면으로 비교합니다. 왼쪽이 효과를 넣기 전, 오른쪽이 넣은 뒤입니다. 실수를 다루는 항목은 왼쪽이 실수, 오른쪽이 고친 모습입니다.</p>
 </header>
