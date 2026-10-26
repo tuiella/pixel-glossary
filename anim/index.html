@@ -419,7 +419,7 @@ CATS.forEach(c=>{
     card.innerHTML=`<h3>${t.ko}${[t.kind,t.tag].filter(Boolean).map(x=>'<span class="badge">'+x+'</span>').join('')}<span class="en">${t.en}</span></h3>
       <div class="pair"><figure><canvas width="${t.paint?128:(t.res||32)}" height="${t.paint?128:(t.res||32)}" role="img" aria-label="${t.ko} 적용 전"></canvas><figcaption><b>${t.lb||'BEFORE'}</b>${t.b}</figcaption></figure>
       <figure class="after"><canvas width="${t.paint?128:(t.res||32)}" height="${t.paint?128:(t.res||32)}" role="img" aria-label="${t.ko} 적용 후"></canvas><figcaption><b>${t.la||'AFTER'}</b>${t.a}</figcaption></figure></div>
-      <p>${t.d}</p>${t.t?`<p class="tip"><strong>픽셀아트에서는</strong> ${t.t}</p>`:''}`;
+      <p>${t.d}</p>${t.t?`<p class="tip"><strong>팁</strong> ${t.t}</p>`:''}`;
     const [c0,c1]=card.querySelectorAll('canvas');render(c0,t,false);render(c1,t,true);
     if(t.anim)anims.push([c0,c1,t]);
     grid.appendChild(card)});
