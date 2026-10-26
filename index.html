@@ -614,7 +614,7 @@ CATS.forEach(c=>{
   const grid=sec.querySelector('.grid');
   TERMS.filter(t=>t.cat===c.id).forEach(t=>{
     const card=document.createElement('article');card.className='card';
-    card.innerHTML=`<h3>${t.ko}${t.ref?'<span class="badge">참고용</span>':''}<span class="en">${t.en}</span></h3>
+    card.innerHTML=`<h3>${t.ko}<span class="en">${t.en}</span></h3>
       <div class="pair"><figure><canvas width="${t.paint?128:32}" height="${t.paint?128:32}" role="img" aria-label="${t.ko} 적용 전"></canvas><figcaption><b>BEFORE</b>${t.b}</figcaption></figure>
       <figure class="after"><canvas width="${t.paint?128:32}" height="${t.paint?128:32}" role="img" aria-label="${t.ko} 적용 후"></canvas><figcaption><b>AFTER</b>${t.a}</figcaption></figure></div>
       <p>${t.d}</p>${t.t?`<p class="tip"><strong>픽셀아트에서는</strong> ${t.t}</p>`:''}`;
