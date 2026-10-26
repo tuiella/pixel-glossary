@@ -283,6 +283,19 @@ function textK(B,str,x,y,c,q=N/32){let cx=x;for(const ch of str){const g=FONT[ch
 function treeK(B,cx,by,sc){const k=N/32,rx=5*sc*k,ry=6*sc*k,cy=by-12*sc*k;box(B,cx-sc*k*.8,by-7*sc*k,cx+sc*k*.8,by,hex('#5a3820'));
   for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;if(dx*dx+dy*dy<=1)B.set(x,y,quant(GR,litT([dx,dy,Math.sqrt(Math.max(0,1-dx*dx-dy*dy))])))}}
 
+// LOD 다각형 하나를 칠한다(바깥이면 null)
+function polyCol(x,y,cx,cy,r,m){const dx=x+.5-cx,dy=y+.5-cy,d=Math.hypot(dx,dy),seg=2*Math.PI/m,an=((Math.atan2(dy,dx)+Math.PI/m)%(2*Math.PI)+2*Math.PI)%(2*Math.PI),
+  lim=r*Math.cos(Math.PI/m)/Math.cos((an%seg)-Math.PI/m);if(d>lim)return null;const fa=Math.floor(an/seg)*seg,rr=Math.min(1,d/r),
+  nn=m<30?norm([Math.cos(fa)*rr,Math.sin(fa)*rr,Math.sqrt(Math.max(.05,1-rr*rr))]):[dx/r,dy/r,Math.sqrt(Math.max(0,1-rr*rr))];return sh3(nn,hex('#5a8ac0'),.35,40)}
+const MINI=['..HHHH..','.HHHHHH.','.HSSSSH.','.SESSES.','..SSSS..','.BBBBBB.','SBBDDBBS','S.BBBB.S','..BBBB..','..PPPP..','..P..P..','..P..P..','.KK..KK.'],MPAL={H:HAIR,S:SKIN,E:INK,B:SHIRT,D:mul(SHIRT,.75),P:PANTS,K:hex('#2a2024')};
+function mini(B,x0,y0,q=1){MINI.forEach((row,j)=>[...row].forEach((ch,i)=>{if(ch!=='.')box(B,x0+i*q,y0+j*q,x0+(i+1)*q-1,y0+(j+1)*q-1,MPAL[ch])}))}
+// 픽셀 마을 (32 해상도)
+function town32(T){for(let y=0;y<24;y++)for(let x=0;x<32;x++)T.set(x,y,mix(hex('#5a6a9a'),hex('#f0b080'),y/23));
+  for(let y=24;y<32;y++)for(let x=0;x<32;x++)T.set(x,y,(x+y*3)%5===0?hex('#6a5e52'):hex('#8a7e6e'));
+  for(let y=6;y<24;y++)for(let x=1;x<=11;x++)T.set(x,y,y<8?hex('#6a3a3a'):hex('#b89878'));for(let y=9;y<24;y++)for(let x=20;x<=30;x++)T.set(x,y,y<11?hex('#4a3a5a'):hex('#9a8aa0'));
+  [[3,11],[7,11],[3,16],[7,16],[22,13],[26,13],[22,18],[26,18]].forEach(([x,y])=>{T.set(x,y,hex('#ffd070'));T.set(x+1,y,hex('#ffd070'));T.set(x,y+1,hex('#ffd070'));T.set(x+1,y+1,hex('#ffd070'))});
+  for(let y=12;y<24;y++)T.set(16,y,hex('#3a3030'));T.set(16,11,hex('#ffe0a0'));T.set(17,11,hex('#ffe0a0'));mini(T,17,15)}
+
 const TERMS=[
 {cat:'opt',tag:'3D 전용',res:96,ko:'LOD, 디테일 단계',en:'Level of Detail',lb:'모두 고품질',la:'거리별 LOD',b:'멀리 있어도 같은 모델',a:'멀수록 단순한 모델',
  d:'멀리 있는 물체를 더 단순한 모델이나 작은 텍스처로 바꿔 그리는 기법입니다. 멀리서는 어차피 차이가 보이지 않으니 그만큼 계산을 아낍니다.',
@@ -290,11 +303,15 @@ const TERMS=[
  draw(B,a){const k=N/32;fill(B,hex('#d8dce4'));box(B,0,24*k,N-1,N-1,GND);
   [[9,14,8,24],[22,16,5,10],[28.5,19,2.6,6]].forEach(([cx,cy,r,n])=>{cx*=k;cy*=k;r*=k;const m=a?n:128,seg=2*Math.PI/m;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-cx,dy=y+.5-cy,d=Math.hypot(dx,dy),an=((Math.atan2(dy,dx)+Math.PI/m)%(2*Math.PI)+2*Math.PI)%(2*Math.PI),
    lim=r*Math.cos(Math.PI/m)/Math.cos((an%seg)-Math.PI/m);if(d>lim)continue;const fa=Math.floor(an/seg)*seg,rr=Math.min(1,d/r),nn=a?norm([Math.cos(fa)*rr,Math.sin(fa)*rr,Math.sqrt(Math.max(.05,1-rr*rr))]):[dx/r,dy/r,Math.sqrt(Math.max(0,1-(d/r)**2))];B.set(x,y,sh3(nn,hex('#5a8ac0'),.35,40))}})}},
-{cat:'opt',ko:'팝인',en:'Pop-in',lb:'팝인',la:'페이드 인',b:'집이 갑자기 툭 나타남',a:'투명도를 올리며 서서히 나타남',anim:true,
- d:'물체가 그려지기 시작하는 거리에 들어오거나 LOD가 바뀌는 순간, 눈앞에서 갑자기 나타나거나 모양이 툭 바뀌는 현상입니다.',
- t:'나타날 때 투명도를 0에서 1로 서서히 올리면 바뀌는 순간이 숨겨집니다. LOD가 바뀔 때도 이전 모델과 새 모델을 잠깐 겹쳐 섞습니다. 반투명 처리가 어려운 엔진에서는 디더 패턴으로 대신 채우기도 합니다.',
- draw(B,a,f,s=0){putLayered(B);const ph=(s/3)%1,vis=a?cl((ph-.35)/.3):(ph>.5?1:0);if(!vis)return;
-  for(let y=13;y<=20;y++)for(let x=5;x<=11;x++)B.set(x,y,mix(B.get(x,y),y<=14?hex('#7a2a2a'):(x===8&&y===17)?hex('#ffd070'):hex('#c8a070'),vis))}},
+{cat:'opt',res:96,ko:'팝인',en:'Pop-in',lb:'바로 교체',la:'크로스페이드',b:'다가오는 순간 모양이 툭 바뀜',a:'두 모델을 잠깐 섞어 넘어감',anim:true,
+ d:'물체가 그려지기 시작하는 거리에 들어오거나 LOD 단계가 바뀌는 순간, 눈앞에서 물체가 갑자기 나타나거나 모양이 툭 바뀌는 현상입니다. 카메라가 다가가는 동안 공이 6각형, 10각형, 매끈한 모델 순서로 바뀝니다.',
+ t:'왼쪽 위 숫자는 지금 그리는 LOD 단계입니다(0이 가장 정밀). 바뀌는 순간 이전 모델과 새 모델을 짧게 섞으면(크로스페이드) 바뀌는 순간이 숨겨집니다. 반투명 처리가 어려운 엔진에서는 디더 패턴으로 대신 섞기도 합니다.',
+ draw(B,a,f,s=0){const k=N/32;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<24*k?mix(hex('#c8d4e4'),hex('#eef0f4'),y/(24*k)):mix(GND,mul(GND,.85),(y-24*k)/(8*k)));
+  const ph=(s/4)%1,r=(3.5+ph*10)*k,cx=16*k,cy=24*k-r,M=[6,10,64],TH=[7*k,11*k],lv=r<TH[0]?0:r<TH[1]?1:2;let lo=lv,hi=lv,w=0;
+  if(a)TH.forEach((th,i)=>{if(Math.abs(r-th)<1.4*k){lo=i;hi=i+1;w=cl((r-(th-1.4*k))/(2.8*k))}});
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const sh=Math.hypot((x+.5-cx)/(r*1.1),(y+.5-24*k)/(r*.22));if(sh<1)darken(B,x,y,1-.35*(1-sh))}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const bg=B.get(x,y),c1=polyCol(x,y,cx,cy,r,M[lo]),c2=lo===hi?c1:polyCol(x,y,cx,cy,r,M[hi]);if(!c1&&!c2)continue;B.set(x,y,lo===hi?c1:mix(c1||bg,c2||bg,w))}
+  const show=w>.5?hi:lo;box(B,2,2,2+5*k,2+7*k,hex('#1c1a24'));textK(B,String(2-show),2+k,2+k,hex('#ffe08a'),k)}},
 {cat:'opt',ko:'프러스텀 컬링',en:'Frustum Culling',lb:'전부 그림',la:'프러스텀 컬링',b:'안 보이는 것까지 계산',a:'시야 밖은 건너뜀',
  d:'카메라 시야(프러스텀) 밖에 있는 물체는 아예 그리지 않는 최적화입니다. 위에서 내려다본 그림이고, 밝은 부채꼴이 카메라 시야입니다.',
  t:'회색 점이 이번 프레임에 그리지 않은 물체입니다. 2D 게임에서도 화면 밖 스프라이트와 타일을 건너뛰는 것이 같은 원리입니다.',
@@ -311,11 +328,11 @@ const TERMS=[
   for(let i=0;i<N*N;i++)if(cnt[i])B.set(i%N,Math.floor(i/N),hsv(Math.max(0,220-cnt[i]*26),.85,.95))}},
 {cat:'opt',ko:'인스턴싱',en:'GPU Instancing',lb:'하나씩 요청',la:'인스턴싱',b:'풀 40포기를 한 포기씩 40번 요청',a:'요청 한 번에 40포기를 모두 그림',anim:true,
  d:'같은 모델이나 스프라이트를 위치만 바꿔 수백, 수천 개 그릴 때 한 번의 요청으로 모두 그리는 방법입니다. 풀, 나무, 군중, 총알처럼 같은 것이 많을 때 씁니다.',
- t:'왼쪽 위 숫자가 지금까지 보낸 그리기 요청 수입니다. 왼쪽은 노란 풀이 지금 그리는 한 포기입니다. 3편의 배칭과 목적은 같고, 방법이 다릅니다.',
+ t:'왼쪽 위 숫자가 지금까지 보낸 그리기 요청 수입니다. 왼쪽이 10번째 요청을 보낼 때, 오른쪽은 단 한 번의 요청으로 40포기를 모두 그리고 끝납니다. 3편의 배칭과 목적은 같고, 방법이 다릅니다.',
  draw(B,a,f,s=0){for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<14?mix(hex('#7ab4e0'),hex('#d0e8f4'),y/13):mix(hex('#5a9a3a'),hex('#3a7a2a'),(y-14)/17));
-  const cur=a?39:Math.floor(s*14)%40;for(let i=0;i<=cur;i++){const x=Math.floor(hash(i,5)*30)+1,y=15+Math.floor(hash(i,6)*16),o=Math.round(Math.sin(s*2.2+x*.4)),hl=!a&&i===cur?hex('#ffe060'):null;
+  const c0=Math.floor(s*14)%40,done=c0>=9,cur=a?(done?39:-1):c0;for(let i=0;i<=cur;i++){const x=Math.floor(hash(i,5)*30)+1,y=15+Math.floor(hash(i,6)*16),o=Math.round(Math.sin(s*2.2+x*.4)),hl=!a&&i===cur?hex('#ffe060'):a&&c0===9?hex('#ffe060'):null;
    B.set(x+o,y,hl||GR[3]);B.set(x-1,y+1,hl||GR[2]);B.set(x+1,y+1,hl||GR[2]);B.set(x,y+1,hl||GR[2])}
-  const t=String(a?1:cur+1);box(B,1,1,2+t.length*4,7,hex('#1c1a24'));text(B,t,2,2,hex('#ffe08a'))}},
+  const t=String(a?(done?1:0):c0+1);box(B,1,1,2+t.length*4,7,hex('#1c1a24'));text(B,t,2,2,hex('#ffe08a'))}},
 {cat:'opt',tag:'3D 전용',res:96,ko:'빌보드, 임포스터',en:'Billboard / Impostor',lb:'고정된 평면',la:'빌보드',b:'옆에서 보면 종잇장처럼 얇아짐',a:'항상 카메라를 바라봄',anim:true,
  d:'멀리 있는 나무 같은 3D 물체를 평면 그림 한 장으로 대신하고, 그 평면이 항상 카메라 쪽을 향하게 돌리는 기법입니다. 여러 각도에서 미리 찍은 그림을 바꿔 쓰면 임포스터라고 합니다.',
  t:'카메라가 나무 주위를 도는 장면입니다. 평면을 고정해 두면 옆에서 볼 때 얇아지거나 사라집니다.',
@@ -485,12 +502,28 @@ const TERMS=[
   const hz=11*k;for(let y=0;y<hz;y++)for(let x=0;x<N;x++){const top=hz-(2.5+Math.sin(x/(4*k))*1.6+Math.sin(x/(1.7*k))*.6)*k;if(y>=top)B.set(x,y,hex('#7a8ca8'))}
   for(let y=Math.ceil(hz);y<N;y++){const d=(y-hz)/(N-hz),z=1/Math.max(.02,d);for(let x=0;x<N;x++){const u=(x-N/2)/(d*N),line=Math.abs(u*2-Math.round(u*2))<.035/d*d*1.2+.012||Math.abs(z*.5-Math.round(z*.5))<.02*z;B.set(x,y,line?mix(GND,hex('#8a8070'),.6):mix(hex('#b8b0a0'),GND,d))}}
   const at_=(u,d)=>[N/2+u*d*N,hz+d*(N-hz)];[[-.45,.22,'t'],[.4,.3,'t'],[.05,.5,'c'],[-.25,.78,'t'],[.32,.95,'t']].forEach(([u,d,w])=>{const[x,y]=at_(u,d),sc=d*1.25;w==='t'?treeK(B,x,y,sc):chr(x,y,sc*1.1)})}},
-{cat:'twod',ko:'HD-2D',en:'HD-2D',lb:'픽셀아트만',la:'HD-2D',b:'평평한 픽셀 장면',a:'3D 조명, 피사계 심도, 블룸을 더함',
- d:'픽셀아트 캐릭터와 소품을 3D 공간에 세우고, 사실적인 조명, 피사계 심도, 블룸 같은 후처리를 더하는 표현 방식입니다. 스퀘어에닉스가 옥토패스 트래블러에서 이 이름을 썼습니다.',
- t:'캐릭터 픽셀은 그대로 두고 배경과 빛만 고급스럽게 만드는 것이 핵심 재료입니다.',
- draw(B,a){const{C,D}=layered();for(let y=0;y<N;y++)for(let x=0;x<N;x++){const i=y*N+x;let c=C[i];if(a){const r=Math.round(Math.abs(D[i]-.9)*2.2);if(r){let acc=[0,0,0],k=0;for(let j=-r;j<=r;j++)for(let q=-r;q<=r;q++){const cc=C[Math.min(N-1,Math.max(0,y+j))*N+Math.min(N-1,Math.max(0,x+q))];acc=acc.map((v,z)=>v+cc[z]);k++}c=acc.map(v=>v/k)}
-   const g=Math.exp(-((x-20)**2+(y-13)**2)/30)*.5;c=c.map((v,z)=>v*[1.08,1,.85][z]+[1,.8,.5][z]*g);const vg=Math.hypot(x-16,y-16)/22;c=mul(c,1-.5*vg*vg)}B.set(x,y,c)}
-  blob(B,12,29,3,4)}},
+{cat:'twod',res:96,ko:'HD-2D',en:'HD-2D',lb:'픽셀아트만',la:'HD-2D',b:'평평한 픽셀 마을',a:'3D 바닥과 건물, 조명, 피사계 심도, 블룸',
+ d:'픽셀아트 캐릭터는 그대로 두고, 배경을 원근이 있는 3D 공간으로 만든 뒤 사실적인 조명, 피사계 심도, 블룸 같은 후처리를 더하는 표현 방식입니다. 스퀘어에닉스가 옥토패스 트래블러에서 이 이름을 썼습니다.',
+ t:'오른쪽 캐릭터는 왼쪽과 같은 픽셀 그림이고 흐림도 받지 않습니다. 배경만 깊이에 따라 흐려지고, 가로등과 창문의 빛이 번집니다.',
+ draw(B,a){const k=N/32;if(!a){up32(B,town32);return}const hz=13;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const X=(x+.5)/k,Y=(y+.5)/k;let c;
+   if(Y<hz){c=mix(hex('#4a5a8a'),hex('#f0b080'),Y/hz);c=c.map((v,i)=>v+[.35,.2,.05][i]*Math.exp(-((X-26)**2+(Y-hz)**2)/30))}
+   else{const d=(Y-hz)/(32-hz)+.03,u=(X-16)/(d*32),v=1/d,su=u*5,sv=v*1.6,fu=su-Math.floor(su),fv=sv-Math.floor(sv);c=(fu<.08||fv<.1)?hex('#4a4038'):mix(hex('#a89888'),hex('#7a6a5a'),hash(Math.floor(su)+50,Math.floor(sv)+50));
+    const g=Math.exp(-((X-17)**2+((Y-25)*2)**2)/60);c=c.map((q,i)=>q*(.62+.7*g+.2*d)+[.22,.13,.03][i]*g)}
+   if(X>=2&&X<11&&Y>=5&&Y<17)c=Y<6.5?hex('#6a3a3a'):mix(hex('#d8b898'),hex('#8a6a58'),(Y-6.5)/12);
+   if(X>=11&&X<14&&Y>=5+(X-11)*.5&&Y<17-(X-11)*.4)c=Y<6.5+(X-11)*.5?hex('#4a2a2a'):hex('#7a5a4a');
+   if(X>=21&&X<30&&Y>=7&&Y<18)c=Y<8.5?hex('#4a3a5a'):mix(hex('#a89ab0'),hex('#6a5a78'),(Y-8.5)/10);
+   if(X>=18&&X<21&&Y>=7+(21-X)*.5&&Y<18-(21-X)*.4)c=Y<8.5+(21-X)*.5?hex('#2a2a3a'):hex('#5a4a68');
+   [[3.5,8.5],[7.5,8.5],[3.5,12.5],[7.5,12.5],[23,10.5],[27,10.5],[23,14],[27,14]].forEach(([wx,wy])=>{if(X>=wx&&X<wx+1.8&&Y>=wy&&Y<wy+2)c=hex('#ffe090')});
+   if(Math.abs(X-17)<.35&&Y>=9&&Y<25)c=hex('#2a2424');if(Math.hypot(X-17,Y-8.5)<1)c=hex('#fff4d0');
+   B.set(x,y,c)}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=((x+.5)/k-21)/2.6,dy=((y+.5)/k-26.2)/.7;if(dx*dx+dy*dy<1)darken(B,x,y,.6+.4*(dx*dx+dy*dy))}
+  const S=copyOf(B),rad=Y=>Math.min(2,Math.round(Math.abs(Y-25)/5));
+  for(let y=0;y<N;y++){const r=rad((y+.5)/k);if(!r)continue;for(let x=0;x<N;x++){let acc=[0,0,0],n=0;for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++){const c=at(S,x+i,y+j);acc=acc.map((v,z)=>v+c[z]);n++}B.set(x,y,acc.map(v=>v/n))}}
+  const Bl=copyOf(B),br=(x,y)=>{const c=at(Bl,x,y);return lum(c)>.86?c:[0,0,0]};
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){let acc=[0,0,0],w=0;for(let j=-5;j<=5;j++)for(let i=-5;i<=5;i++){const g=Math.exp(-(i*i+j*j)/10),c=br(x+i,y+j);acc=acc.map((v,z)=>v+c[z]*g);w+=g}
+   const vg=Math.hypot(x/N-.5,y/N-.5)*1.4;B.set(x,y,Bl.get(x,y).map((v,z)=>cl((v+acc[z]/w*.7)*(1-.4*vg*vg))))}
+  mini(B,Math.round(21*k)-8,Math.round(26.5*k)-26,2)}},
 {cat:'twod',res:64,ko:'스프라이트 스태킹',en:'Sprite Stacking',lb:'평면 스프라이트',la:'스프라이트 스태킹',b:'위에서 본 그림 한 장이 돎',a:'단면 여러 장을 쌓아 입체처럼 돎',anim:true,
  d:'물체를 얇게 썬 단면 그림 여러 장을 1픽셀씩 위로 쌓아 그려서 3D처럼 보이게 하는 기법입니다. 단면을 각각 돌리면 물체가 입체적으로 회전합니다.',
  t:'차, 집, 나무 상자처럼 각진 물체에 잘 맞습니다. 단면 수가 많을수록 높아 보입니다.',
