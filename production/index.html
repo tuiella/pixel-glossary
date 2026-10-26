@@ -538,7 +538,34 @@ const TERMS=[
   const has=(x,y)=>x>=0&&y>=0&&x<N&&y<N&&M.get(x,y)[0]!==-9,occ=(x,y)=>{const X=(x+.5)/k,Y=(y+.5)/k;return X>=9.5&&X<22.5&&Y>=3&&Y<28.5};
   for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(has(x,y))B.set(x,y,M.get(x,y));
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!occ(x,y))continue;const X=(x+.5)/k-16,Y=(y+.5)/k;let c=mix(hex('#8a8478'),hex('#c8c0b0'),cl(1-Math.abs(X+1.5)/6.5));if(Y%5<.6||Y<4.2)c=mul(c,.72);if(Math.abs(X)>5.8)c=mul(c,.8);B.set(x,y,c)}
-  if(!a)return;for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!occ(x,y)||!has(x,y))continue;const edge=!has(x+1,y)||!has(x-1,y)||!has(x,y+1)||!has(x,y-1);B.set(x,y,edge?hex('#9ff0ff'):mix(B.get(x,y),hex('#3aa8e0'),.6))}}}
+  if(!a)return;for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(!occ(x,y)||!has(x,y))continue;const edge=!has(x+1,y)||!has(x-1,y)||!has(x,y+1)||!has(x,y-1);B.set(x,y,edge?hex('#9ff0ff'):mix(B.get(x,y),hex('#3aa8e0'),.6))}}},
+{cat:'twod',tag:'3D 전용',res:96,ko:'카메라 근접 페이드',en:'Camera Proximity Fade',lb:'페이드 없음',la:'근접 페이드',b:'다가가면 기둥이 화면을 막음',a:'가까워질수록 디더로 비워짐',anim:true,
+ d:'카메라에 아주 가까이 붙은 물체를 투명하게 하거나 디더 패턴으로 지워서, 시야를 막지 않게 하는 처리입니다. 3인칭 카메라가 벽이나 나무에 파묻힐 때 많이 씁니다.',
+ t:'이 처리가 없으면 카메라가 물체 안으로 들어가서 화면이 통째로 막히거나, 물체가 잘려 단면이 보이는 니어 클리핑이 생깁니다.',
+ draw(B,a,f,s=0){const k=N/32,hz=12*k;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<hz?mix(hex('#8ab8d8'),hex('#d8e8ee'),y/hz):mix(hex('#a8a080'),hex('#6a7a4a'),(y-hz)/(N-hz)));
+  for(let y=Math.ceil(hz);y<N;y++){const d=(y-hz)/(N-hz)+.02;for(let x=0;x<N;x++){const u=(x-N/2)/(d*N),z=1/d;if(Math.abs(u*2-Math.round(u*2))<.03/d*d+.01||Math.abs(z*.6-Math.round(z*.6))<.025*z)darken(B,x,y,.88)}}
+  const ph=(s/4)%1,z=6-ph*5.75,w=4/z*k,cx=N*.52,bot=hz+(N-hz)*Math.min(1.6,1/z*.9),top=bot-26/z*k;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=(x+.5-cx)/w;if(Math.abs(dx)>1||y<top||y>bot)continue;const n=[dx,0,Math.sqrt(1-dx*dx)];
+   if(a&&z<2.2){const al=cl((z-.5)/1.7);if((BAYER[y%4][x%4]+.5)/16>al)continue}B.set(x,y,mul(sh3(n,hex('#b8a890'),.15,20),Math.floor(y/(3*k/z))%4===0?.8:1))}
+  if(!a&&z<.9){for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Math.abs((x+.5-cx)/w)<=1)B.set(x,y,mul(hex('#5a5048'),.6+.2*Math.sin(x*.3)))}}},
+{cat:'twod',res:64,ko:'오클루전 컷아웃',en:'Occlusion Cutout',lb:'가려짐',la:'컷아웃',b:'앞쪽 벽에 캐릭터가 가려짐',a:'캐릭터 주변만 벽이 동그랗게 뚫림',anim:true,
+ d:'카메라와 캐릭터 사이를 가리는 벽이나 건물을, 캐릭터 주변만 동그랗게 뚫거나 투명하게 만들어 보여 주는 방식입니다. 시스루가 캐릭터를 비쳐 보이게 한다면, 컷아웃은 앞을 가린 물체를 지웁니다.',
+ t:'구멍 가장자리를 디더나 반투명으로 부드럽게 처리하면 칼로 오린 것처럼 보이지 않습니다.',
+ draw(B,a,f,s=0){const k=N/32;up32(B,T=>{fill(T,hex('#d8d0c0'));for(let y=24;y<32;y++)for(let x=0;x<32;x++)T.set(x,y,(x+y)%6===0?hex('#4e3b30'):FLOOR);for(let y=8;y<24;y++)for(let x=2;x<8;x++)T.set(x,y,hex('#a8743e'))});
+  const P=walk(s*6,.5);P.x=5+ping((s/6)%1)*22;P.g=27;fig(B,P);const cx=P.x*k,cy=19*k;
+  const T=Buf();up32(T,Q=>bricks(Q,false,true));for(let y=0;y<N;y++)for(let x=0;x<N;x++){const Y=(y+.5)/k;if(Y<5||Y>29)continue;
+   if(a){const d=Math.hypot(x+.5-cx,(y+.5-cy)*.8)/k;if(d<6)continue;if(d<7.5&&(BAYER[y%4][x%4]+.5)/16<(7.5-d)/1.5)continue}B.set(x,y,T.get(x,y))}}},
+{cat:'twod',res:64,ko:'지붕 숨기기, 컷어웨이',en:'Roof Hiding / Cutaway',lb:'지붕 그대로',la:'지붕 숨기기',b:'집에 들어가면 캐릭터가 사라짐',a:'들어가면 지붕이 걷히고 실내가 보임',anim:true,
+ d:'위에서 내려다보는 시점의 게임에서 캐릭터가 건물 안으로 들어가면 지붕이나 위층을 지우고 실내를 보여 주는 방식입니다. 높이를 기준으로 위쪽을 잘라 내는 방식은 단면 보기(컷 플레인)라고도 부릅니다.',
+ t:'지붕을 바로 지우기보다 짧게 페이드하면 덜 갑작스럽습니다. 실내가 보이는 동안 바깥을 살짝 어둡게 하면 시선이 실내로 모입니다.',
+ draw(B,a,f,s=0){const k=N/32,ph=(s/5)%1,pp=ping(ph),cx=16*k,cy=(30-pp*16)*k,inside=cl((22-cy/k)/3);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const X=(x+.5)/k,Y=(y+.5)/k;let c=hash(Math.floor(X*2),Math.floor(Y*2))>.85?hex('#5a9a3a'):hex('#6aaa48');
+   if(X>=7&&X<25&&Y>=7&&Y<23){c=(Math.floor(Y)%3===0)?hex('#a8743e'):hex('#c08a50');if(X<8||X>=24||Y<8||(Y>=22&&Math.abs(X-16)>2))c=hex('#5a4a40');
+    if(X>=10&&X<15&&Y>=10&&Y<13)c=hex('#7a5030');if(X>=18&&X<22&&Y>=10&&Y<16)c=hex('#e8e0d0');if(X>=18&&X<22&&Y>=10&&Y<11.5)c=hex('#c84a4a')}
+   if(a&&inside>0&&!(X>=7&&X<25&&Y>=7&&Y<23))c=mul(c,1-.35*inside);B.set(x,y,c)}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const d=Math.hypot(x+.5-cx,y+.5-cy)/k;if(d<1.8)B.set(x,y,d<1.1?HAIR:SHIRT)}
+  const ra=a?1-inside:1;if(ra<=0)return;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const X=(x+.5)/k,Y=(y+.5)/k;if(X<6||X>=26||Y<5.5||Y>=23.5)continue;
+   const ridge=Math.abs(Y-14.5),c=mul(hex('#b84a3a'),(Math.floor((ridge)*1.2)%2?.86:1)*(Y<14.5?1.05:.85));B.set(x,y,mix(B.get(x,y),c,ra))}}}
 ];
 
 
