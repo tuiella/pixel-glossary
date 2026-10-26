@@ -171,7 +171,10 @@ const CATS=[
  {id:'motion',name:'움직임',en:'MOTION'},
  {id:'camera',name:'카메라와 렌더링',en:'CAMERA & RENDERING'},
  {id:'scale',name:'확대와 회전',en:'SCALING & ROTATION'},
- {id:'fx',name:'화면 연출',en:'SCREEN FX'}];
+ {id:'fx',name:'화면 연출',en:'SCREEN FX'},
+ {id:'error',name:'화면 오류',en:'GLITCHES & ARTIFACTS'}];
+const toL=c=>c.map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4),toS=c=>c.map(v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055);
+const edgeOf=(m,x,y)=>!m(x,y)&&(m(x+1,y)||m(x-1,y)||m(x,y+1)||m(x,y-1));
 
 const TERMS=[
 {cat:'light',ko:'AO, 앰비언트 오클루전',en:'Ambient Occlusion',b:'없음',a:'AO',
@@ -600,7 +603,102 @@ const TERMS=[
 {cat:'scale',ko:'하이레스 회전과 믹셀',en:'High-res Rotation / Mixels',b:'회전 전',a:'하이레스 회전',anim:true,
  d:'하이레스 렌더링에서는 스프라이트를 키운 채로 회전하므로 모양은 깨지지 않습니다. 대신 기울어진 큰 픽셀이 배경의 픽셀 격자와 어긋나서 믹셀이 생깁니다.',
  t:'흔들리는 간판처럼 작은 각도로 잠깐 움직이는 건 괜찮지만, 계속 도는 물체는 회전 프레임을 따로 그리는 편이 깔끔합니다.',
- paint(cv,a,s=0){const O=off(),c=ctx2(cv);c.drawImage(O.world,-96,0,384,128);c.save();c.translate(64,60);if(a)c.rotate(s*.5);c.drawImage(crateCv(),-28,-28,56,56);c.restore()}}
+ paint(cv,a,s=0){const O=off(),c=ctx2(cv);c.drawImage(O.world,-96,0,384,128);c.save();c.translate(64,60);if(a)c.rotate(s*.5);c.drawImage(crateCv(),-28,-28,56,56);c.restore()}},
+
+{cat:'error',ko:'지터링, 반올림 지터',en:'Jittering',b:'오류',a:'정상',anim:true,
+ d:'함께 움직여야 할 것들이 1픽셀 안팎으로 바르르 떨리는 현상입니다. 캐릭터는 반올림하고 든 물건은 내림하는 것처럼, 위치를 서로 다른 방식으로 정수로 바꾸면 생깁니다.',
+ t:'위치는 소수점으로 계산하다가 그리기 직전에 한 번만, 같은 방식으로 반올림합니다.',
+ draw(B,a,f,s=0){tavern(B);const X=6+(s*2.3)%18,cx=Math.round(X),lx=a?cx+5:Math.floor(X)+5;blob(B,cx,27,4,5);B.set(cx+4,21,BALL[2]);
+  B.set(lx,18,hex('#2a1c1c'));for(let y=19;y<=20;y++){B.set(lx,y,hex('#ffd070'));B.set(lx+1,y,hex('#ffd070'))}}},
+{cat:'error',ko:'업데이트 순서 지터',en:'Update Order Jitter',b:'오류',a:'정상',anim:true,
+ d:'물리는 일정 간격으로 계산하는데 화면은 그보다 자주 그리거나, 카메라가 캐릭터보다 먼저 움직이면 생기는 떨림입니다. 프레임마다 위치 차이가 들쭉날쭉해집니다.',
+ t:'카메라는 캐릭터 이동이 끝난 뒤에 갱신하고, 물리 위치는 프레임 사이를 보간해서 그립니다. 유니티라면 LateUpdate와 Rigidbody Interpolate가 이 기능입니다.',
+ draw(B,a,f,s=0){const v=10,tp=a?s:Math.floor(s*12)/12,c=Math.round(6+v*s);for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,wpix((x+c)%32,y));
+  blob(B,Math.round(14-v*(s-tp)),27,3.5,4.5)}},
+{cat:'error',ko:'보일링',en:'Boiling',b:'오류',a:'정상',anim:true,
+ d:'프레임마다 다시 그리다 보니 외곽선과 명암이 조금씩 달라져서, 가만히 있는 부분이 부글부글 끓는 것처럼 떨리는 현상입니다.',
+ t:'움직이지 않는 부분은 프레임끼리 픽셀을 그대로 복사합니다. AI로 프레임을 하나씩 뽑을 때 특히 자주 생깁니다.',
+ draw(B,a,f,s=0){fill(B,PAPER);ground(B,27);const fr=a?0:Math.floor(s*8);
+  sphere(B,16,15.5+(a?0:(hash(fr,6)-.5)*.7),11+(a?0:(hash(fr,5)-.5)*.8),(n,x,y)=>quant(BALL,cl(litT(n)+(a?0:(hash(x+fr*31,y+fr*17)-.5)*.25))))}},
+{cat:'error',ko:'타일 이음새',en:'Tile Seams',b:'오류',a:'정상',anim:true,
+ d:'타일맵을 움직이거나 확대할 때 타일 사이에 1픽셀짜리 틈이 깜박이는 현상입니다. 타일을 소수점 위치에 그리거나 텍스처 필터가 이웃 픽셀을 섞을 때 생깁니다.',
+ t:'카메라 위치를 정수로 맞추고, 타일 아틀라스에 여백을 두고, 필터는 Nearest로 둡니다.',
+ draw(B,a,f,s=0){const o=(s*3)%8,P=['#6a6a78','#7a7888','#5e5e6c'].map(hex);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const wx=x+o,tile=Math.floor(wx/8),lx=wx-tile*8,ly=y%8;let c=P[Math.floor(hash(tile,Math.floor(y/8))*3)];
+   if(lx<1||ly===0)c=mix(c,[1,1,1],.18);else if(lx>=7||ly===7)c=mul(c,.75);if(!a&&lx<1&&Math.floor(s*10)%3!==0)c=hex('#0a0a0e');B.set(x,y,c)}}},
+{cat:'error',ko:'텍스처 블리딩',en:'Texture Bleeding',b:'오류',a:'정상',
+ d:'스프라이트 시트에서 바로 옆에 붙어 있던 다른 그림의 색이 가장자리로 새어 들어오는 현상입니다. 왼쪽은 옆 칸의 빨간 그림이 오른쪽과 위쪽 테두리에 묻어난 모습입니다.',
+ t:'아틀라스에서 그림 사이에 1~2픽셀 여백을 두거나, 가장자리 픽셀을 바깥으로 한 칸 복제해 둡니다.',
+ draw(B,a){fill(B,PAPER);ground(B,26);blob(B,16,26,6,7);if(a)return;const m=(x,y)=>inEll(x,y,16,19,6,7);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(m(x,y)&&(!m(x+1,y)||!m(x,y-1)))B.set(x,y,mix(B.get(x,y),hex('#e04040'),.55))}},
+{cat:'error',ko:'밉맵 흐림',en:'Mipmap Blur',b:'오류',a:'정상',
+ d:'엔진이 축소용으로 자동으로 만든 작은 텍스처(밉맵)를 쓰면서 픽셀아트가 뿌옇게 나오는 현상입니다. 화면 배율이 바뀌거나 살짝 작게 그릴 때 잘 생깁니다.',
+ t:'픽셀아트 텍스처는 밉맵 생성을 끕니다.',
+ draw(B,a){tavern(B);if(a)return;const T=Buf();tavern(T);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){let r=[0,0,0],k=0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++){const c=T.get(Math.min(N-1,Math.max(0,x+i)),Math.min(N-1,Math.max(0,y+j)));r=r.map((q,z)=>q+c[z]);k++}B.set(x,y,r.map(q=>q/k))}}},
+{cat:'error',ko:'텍스처 압축 깨짐',en:'Compression Artifacts',b:'오류',a:'정상',
+ d:'엔진이 용량을 줄이려고 텍스처를 4×4 블록 단위로 압축하면서 색이 뭉개지고 팔레트가 틀어지는 현상입니다. 블록마다 색을 몇 개만 남기기 때문에 작은 디테일이 먼저 사라집니다.',
+ t:'픽셀아트 텍스처는 압축 설정을 None(무압축)으로 둡니다.',
+ draw(B,a){tavern(B);blob(B,16,27,4,5);if(a)return;
+  for(let by=0;by<N;by+=4)for(let bx=0;bx<N;bx+=4){let lo=null,hi=null;for(let y=by;y<by+4;y++)for(let x=bx;x<bx+4;x++){const c=B.get(x,y);if(!lo||lum(c)<lum(lo))lo=c;if(!hi||lum(c)>lum(hi))hi=c}
+   const P=[lo,hi,mix(lo,hi,1/3),mix(lo,hi,2/3)];for(let y=by;y<by+4;y++)for(let x=bx;x<bx+4;x++){const c=B.get(x,y);let best=P[0],bd=9;P.forEach(p=>{const d=(p[0]-c[0])**2+(p[1]-c[1])**2+(p[2]-c[2])**2;if(d<bd){bd=d;best=p}});B.set(x,y,best)}}}},
+{cat:'error',ko:'알파 테두리, 할로',en:'Alpha Fringe / Halo',b:'오류',a:'정상',
+ d:'투명 배경 스프라이트 둘레에 흰 선이나 검은 선이 생기는 현상입니다. 투명한 픽셀에 숨어 있던 배경색이 필터링이나 확대 과정에서 섞여 나와서 생깁니다.',
+ t:'프리멀티플라이드 알파로 저장하거나, 투명 픽셀의 색을 가장자리 색으로 채워 둡니다.',
+ draw(B,a){tavern(B);const m=(x,y)=>inEll(x,y,16,19,6,7);if(!a)for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(edgeOf(m,x,y))B.set(x,y,mix(B.get(x,y),hex('#f0f0f4'),.6));blob(B,16,26,6,7)}},
+{cat:'error',ko:'감마 오류, sRGB',en:'Gamma / sRGB Error',b:'오류',a:'정상',
+ d:'색을 섞을 때 감마를 무시하고 화면용 값 그대로 섞으면 중간색이 실제보다 어둡고 탁하게 나오는 현상입니다. 반투명 빛이나 그림자, 그라데이션이 칙칙해 보이는 원인입니다.',
+ t:'엔진의 색 공간 설정(Linear와 Gamma)을 확인하고, 블렌딩은 선형 공간에서 합니다.',
+ draw(B,a){fill(B,DARK);const pr=[[hex('#ff2020'),hex('#20ff20')],[hex('#2040ff'),hex('#ffe020')]];
+  for(let y=0;y<N;y++){const row=y<16?0:1,ly=y%16;if(ly<2||ly>13)continue;for(let x=0;x<N;x++){const [c0,c1]=pr[row],t=x/31;B.set(x,y,a?toS(mix(toL(c0),toL(c1),t)):mix(c0,c1,t))}}}},
+{cat:'error',ko:'컬러 밴딩',en:'Color Banding',b:'오류',a:'정상',
+ d:'부드러워야 할 그라데이션에 계단 같은 띠가 생기는 현상입니다. 색 단계가 부족한 텍스처나 낮은 비트 깊이의 렌더 버퍼에서 생깁니다. 픽셀아트의 밴딩 실수와 이름은 같지만 다른 현상입니다.',
+ t:'버퍼 비트 깊이를 올리거나, 아주 약한 디더링을 섞어 경계를 흩뜨립니다.',
+ draw(B,a){for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=cl(1-Math.hypot(x-16,y-6)/30),c=mix(hex('#101830'),hex('#c06848'),v),lev=a?48:6,d=a?(BAYER[y%4][x%4]/16-.5)/lev:0;
+  B.set(x,y,c.map(q=>Math.round((q+d)*lev)/lev))}}},
+{cat:'error',ko:'스터터, 프레임 페이싱',en:'Stutter / Frame Pacing',b:'오류',a:'정상',anim:true,
+ d:'평균 프레임은 충분한데 프레임 간격이 들쭉날쭉해서 움직임이 툭툭 걸리는 현상입니다. 같은 프레임이 두 번 나오거나 한 프레임을 건너뛰면 생깁니다. 느린 패닝에서 특히 잘 보입니다.',
+ t:'이동량을 실제 경과 시간에 맞추고, 프레임 제한과 수직 동기화를 함께 확인합니다. 이 장면은 실제 현상을 흉내 낸 것입니다.',
+ draw(B,a,f,s=0){view(B,10);let t=s;if(!a){const fi=Math.floor(s*20);const k=hash(fi,11)>.72?fi-2:hash(fi,12)>.85?fi+1:fi;t=k/20}blob(B,Math.round(4+(t*9)%24),27,3.5,4.5)}},
+{cat:'error',ko:'스크린 티어링',en:'Screen Tearing',b:'오류',a:'정상',anim:true,
+ d:'화면이 한 장을 다 그리기 전에 다음 프레임으로 바뀌어서, 가로로 찢어진 선을 경계로 위아래가 어긋나 보이는 현상입니다. 빠르게 좌우로 움직일 때 잘 보입니다.',
+ t:'수직 동기화(V-Sync)나 가변 주사율(G-Sync, FreeSync)로 막습니다. 이 장면은 실제 현상을 흉내 낸 것입니다.',
+ draw(B,a,f,s=0){const cam=Math.round((s*14)%40);view(B,cam);if(a)return;const ty=Math.floor(hash(Math.floor(s*6),4)*20)+6,pv=Math.max(0,cam-4);
+  for(let y=0;y<ty;y++)for(let x=0;x<N;x++)B.set(x,y,wpix(pv+x,y))}},
+{cat:'error',ko:'피벗 흔들림',en:'Pivot Wobble',b:'오류',a:'정상',anim:true,
+ d:'애니메이션 프레임마다 기준점(피벗)이 조금씩 달라서, 제자리에 서 있는 캐릭터가 미세하게 미끄러지거나 들썩이는 현상입니다.',
+ t:'모든 프레임의 발 위치를 같은 기준점에 맞춥니다. AI로 뽑은 프레임이나 크기가 제각각인 이미지를 이어 붙일 때 아주 흔합니다.',
+ draw(B,a,f,s=0){tavern(B);const fr=Math.floor(s*6)%4,ry=[7,7.4,7.8,7.4][fr];blob(B,16+(a?0:[0,1,0,-1][fr]),27+(a?0:[0,0,1,0][fr]),6,ry)}},
+{cat:'error',ko:'정렬 오류, 그리기 순서',en:'Sorting Error',b:'오류',a:'정상',anim:true,
+ d:'앞뒤 순서가 틀려서, 탁자 뒤를 지나가는 캐릭터가 탁자 앞에 그려지는 것 같은 오류입니다. 사이드뷰나 탑다운에서 물체끼리 겹칠 때 생깁니다.',
+ t:'발 위치의 y값이나 정해 둔 깊이 값으로 그리는 순서를 정합니다.',
+ draw(B,a,f,s=0){const T=Buf();tavern(T);B.d.set(T.d);blob(B,Math.round(4+(s*4)%24),23,3.5,4.5);if(!a)return;
+  for(let x=8;x<=23;x++)for(let y=21;y<=22;y++)B.set(x,y,T.get(x,y));for(let y=23;y<=27;y++){B.set(9,y,T.get(9,y));B.set(22,y,T.get(22,y))}}},
+{cat:'error',ko:'외곽선 겹침',en:'Outline Overlap',b:'오류',a:'정상',
+ d:'외곽선이 있는 스프라이트 두 개가 겹치면 사이에 진한 선이 끼어들어 둘이 따로 노는 것처럼 보이는 현상입니다.',
+ t:'외곽선을 그림에 넣지 않고 셰이더로 겹친 덩어리 전체의 바깥에만 그리거나, 겹치는 쪽 외곽선을 몸 색에 가까운 어두운 색으로 바꿉니다.',
+ draw(B,a){fill(B,PAPER);ground(B,27);const O=hex('#141019'),R2=['#3a1420','#7a2a30','#c0503c','#f08a5a','#ffd8a8'].map(hex),A=(x,y)=>inEll(x,y,12,19,5.5,6.5),Bm=(x,y)=>inEll(x,y,20,20,5.5,6.5);
+  const fa=()=>ellipsoid(B,12,19,5.5,6.5,n=>quant(BALL,litT(n))),fb=()=>ellipsoid(B,20,20,5.5,6.5,n=>quant(R2,litT(n)));
+  if(!a){for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(edgeOf(A,x,y))B.set(x,y,O);fa();for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(edgeOf(Bm,x,y))B.set(x,y,O);fb();return}
+  const U=(x,y)=>A(x,y)||Bm(x,y);for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(edgeOf(U,x,y))B.set(x,y,O);fa();fb();
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(Bm(x,y)&&!Bm(x-1,y)&&A(x-1,y))B.set(x,y,R2[0])}},
+{cat:'error',ko:'Z 파이팅',en:'Z-fighting',b:'오류',a:'정상',anim:true,
+ d:'같은 깊이에 놓인 두 면이 서로 앞에 그려지려고 다투면서 픽셀 단위로 번갈아 깜박이는 현상입니다. 3D에서 흔하고, 2D에서도 정렬 값이 같은 두 스프라이트가 겹치면 비슷하게 생깁니다.',
+ t:'둘 중 하나의 깊이나 정렬 값을 조금 다르게 줍니다.',
+ draw(B,a,f,s=0){floorWall(B,WALL,FLOOR,22);const fr=Math.floor(s*15),p1=hex('#c9925a'),p2=hex('#4a7396');
+  for(let y=4;y<=20;y++)for(let x=3;x<=28;x++){const i1=x>=4&&x<=19&&y>=4&&y<=15,i2=x>=12&&x<=27&&y>=9&&y<=20;if(!i1&&!i2)continue;
+   B.set(x,y,i1&&i2?(a?p2:(hash(x+fr*13,y+fr*7)>.5?p1:p2)):i1?p1:p2)}}},
+{cat:'error',ko:'흐린 UI와 글자',en:'Blurry UI / Text',b:'오류',a:'정상',
+ d:'UI나 픽셀 폰트를 소수점 위치나 비정수 배율에 그리면 글자 획이 옆 픽셀로 번져 뿌옇게 보이는 현상입니다.',
+ t:'UI와 글자는 정수 픽셀 위치에, 폰트 크기는 원래 크기의 정수배로만 씁니다.',
+ draw(B,a){fill(B,DARK);for(let y=9;y<=22;y++)for(let x=4;x<=27;x++)B.set(x,y,(x===4||x===27||y===9||y===22)?hex('#3a2a2a'):hex('#efe4cc'));
+  const T=Buf();text(T,'1280',8,13,[1,1,1]);const ink=hex('#3a2a2a'),g=(x,y)=>x<0||y<0?0:T.get(x,y)[0];
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const m=a?g(x,y):(g(x,y)+g(x-1,y)+g(x,y-1)+g(x-1,y-1))/4;if(m>0)B.set(x,y,mix(B.get(x,y),ink,m))}}},
+{cat:'error',ko:'모아레',en:'Moiré',b:'오류',a:'정상',anim:true,
+ d:'촘촘한 줄무늬나 체크무늬를 비정수 배율로 그리거나 움직이면, 원래 없던 굵은 물결무늬가 나타나는 현상입니다. 디더링한 배경을 확대하거나 패럴랙스로 움직일 때 생길 수 있습니다.',
+ t:'촘촘한 무늬는 정수 배율과 정수 위치에서만 쓰고, 움직이는 배경에는 1픽셀 간격 무늬를 피합니다.',
+ draw(B,a,f,s=0){const z=a?1:.86+.04*Math.sin(s*.8),o=a?Math.round(s*2):s*2,c0=hex('#3a2a40'),c1=hex('#c9a0d0');
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const wx=Math.floor((x+o)/z),wy=Math.floor(y/z);B.set(x,y,(wx+wy)%2?c1:c0)}}}
 ];
 
 function blit(cv,B){const ctx=cv.getContext('2d'),im=ctx.createImageData(N,N);for(let i=0;i<N*N;i++){for(let k=0;k<3;k++)im.data[i*4+k]=Math.round(cl(B.d[i*3+k])*255);im.data[i*4+3]=255}ctx.putImageData(im,0,0)}
