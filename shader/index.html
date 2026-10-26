@@ -339,6 +339,17 @@ const TERMS=[
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){const Y=(y+.5)/k,X=(x+.5)/k,h=(27-Y)/10;if(h<0||h>1)continue;const w=(1-h)*3.4*(.65+.55*vnoise(X/1.6,Y/1.6+s*4));if(Math.abs(X-16)>w)continue;B.set(x,y,h<.3?hex('#fff3b0'):h<.6?hex('#ffb040'):hex('#e05020'))}
   if(!a)return;const T=copyOf(B);for(let y=0;y<N;y++)for(let x=0;x<N;x++){const X=(x+.5)/k,Y=(y+.5)/k,m=Y<21&&Y>2&&Math.abs(X-16)<8?(1-Math.abs(X-16)/8)*cl((21-Y)/6)*cl((Y-2)/8):0;
    if(m)B.set(x,y,at(T,Math.round(x+Math.sin(Y*.9+s*7)*1.4*k*m),Math.round(y+Math.sin(X*.7+s*5)*.6*k*m)))}}},
+{cat:'fx',tag:'3D 전용',res:96,ko:'소프트 파티클, 뎁스 페이드',en:'Soft Particles / Depth Fade',lb:'하드 엣지',la:'소프트 파티클',b:'연기가 바닥에서 칼로 자른 듯 잘림',a:'바닥에 가까울수록 부드럽게 사라짐',anim:true,
+ d:'연기나 불꽃 파티클은 카메라를 바라보는 평평한 판에 반투명 그림을 붙인 것이라, 판이 바닥을 뚫고 지나가면 바닥과 만나는 선을 따라 딱 잘린 경계(하드 엣지)가 생깁니다. 소프트 파티클은 뎁스 맵을 읽어서 바닥과 가까운 부분일수록 투명하게 만들어 이 경계를 지웁니다.',
+ t:'유니티와 언리얼의 파티클 머티리얼에 옵션으로 들어 있고, 언리얼에서는 뎁스 페이드라는 이름으로도 씁니다. 물이나 안개 평면이 지형과 만나는 선도 같은 방법으로 부드럽게 만듭니다.',
+ draw(B,a,f,s=0){const k=N/32,hz=10*k,G=N-hz;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(y<hz){B.set(x,y,mix(hex('#7aa0c8'),hex('#d8e4ec'),y/hz));continue}const d=(y-hz)/G,u=(x-N/2)/(d*N),z=1/d;
+   const tile=Math.abs(u*1.5-Math.round(u*1.5))<.02/d*d+.012||Math.abs(z*1.2-Math.round(z*1.2))<.03*z;B.set(x,y,mix(tile?hex('#3a3e34'):hex('#565c4a'),hex('#7a806c'),1-d))}
+  const P=[];for(let i=0;i<5;i++){const life=wrap(s*.2+hash(i,1)),zb=1.35+hash(i,2)*.9,ux=(hash(i,3)-.5)*1.2;P.push({zb,ux,life,seed:i})}P.sort((p,q)=>q.zb-p.zb);
+  for(const p of P){const yb=hz+G/p.zb,xc=N/2+p.ux*N/p.zb,r=18*k/p.zb*(.75+p.life*.5),yc=yb-p.life*5*k/p.zb+r*.05,fade=Math.sin(Math.min(1,p.life*1.15)*Math.PI);
+   for(let y=Math.max(0,Math.floor(yc-r));y<Math.min(N,yc+r);y++)for(let x=Math.max(0,Math.floor(xc-r));x<Math.min(N,xc+r);x++){const dd=Math.hypot(x+.5-xc,y+.5-yc)/r;if(dd>=1)continue;
+    let al=(1-dd*dd)*(.45+.55*vnoise((x-xc)/(3*k)+p.seed*7,(y-yc)/(3*k)+s*.6))*1.1*fade;if(y>=hz){const zg=G/Math.max(.5,y+.5-hz);al*=a?cl((zg-p.zb)/.45):(zg>p.zb?1:0)}
+    if(al>0)B.set(x,y,mix(B.get(x,y),hex('#f2efe8'),Math.min(1,al)))}}}},
 {cat:'post',ko:'색수차',en:'Chromatic Aberration',lb:'원본',la:'색수차',b:'선명한 경계',a:'가장자리에 무지개 테',
  d:'빨강, 초록, 파랑을 살짝 다른 위치에 그려서 경계에 색 테가 생기게 하는 효과입니다. 원래는 렌즈가 색마다 빛을 다르게 꺾어서 생기는 결함인데, 게임에서는 충격, 혼란, 글리치 연출에 일부러 넣습니다.',
  t:'화면 가장자리로 갈수록 어긋나는 양을 늘리면 렌즈처럼 보입니다. 픽셀아트에서는 1픽셀만 어긋나도 크게 보이니 짧은 순간에만 씁니다.',
