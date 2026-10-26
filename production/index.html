@@ -303,7 +303,7 @@ const TERMS=[
  draw(B,a){const k=N/32;fill(B,hex('#d8dce4'));box(B,0,24*k,N-1,N-1,GND);
   [[9,14,8,24],[22,16,5,10],[28.5,19,2.6,6]].forEach(([cx,cy,r,n])=>{cx*=k;cy*=k;r*=k;const m=a?n:128,seg=2*Math.PI/m;for(let y=0;y<N;y++)for(let x=0;x<N;x++){const dx=x+.5-cx,dy=y+.5-cy,d=Math.hypot(dx,dy),an=((Math.atan2(dy,dx)+Math.PI/m)%(2*Math.PI)+2*Math.PI)%(2*Math.PI),
    lim=r*Math.cos(Math.PI/m)/Math.cos((an%seg)-Math.PI/m);if(d>lim)continue;const fa=Math.floor(an/seg)*seg,rr=Math.min(1,d/r),nn=a?norm([Math.cos(fa)*rr,Math.sin(fa)*rr,Math.sqrt(Math.max(.05,1-rr*rr))]):[dx/r,dy/r,Math.sqrt(Math.max(0,1-(d/r)**2))];B.set(x,y,sh3(nn,hex('#5a8ac0'),.35,40))}})}},
-{cat:'opt',res:96,ko:'팝인',en:'Pop-in',lb:'바로 교체',la:'크로스페이드',b:'다가오는 순간 모양이 툭 바뀜',a:'두 모델을 잠깐 섞어 넘어감',anim:true,
+{cat:'opt',res:96,ko:'팝인/크로스페이드',en:'Pop-in / Crossfade',lb:'바로 교체',la:'크로스페이드',b:'다가오는 순간 모양이 툭 바뀜',a:'두 모델을 잠깐 섞어 넘어감',anim:true,
  d:'물체가 그려지기 시작하는 거리에 들어오거나 LOD 단계가 바뀌는 순간, 눈앞에서 물체가 갑자기 나타나거나 모양이 툭 바뀌는 현상입니다. 카메라가 다가가는 동안 공이 6각형, 10각형, 매끈한 모델 순서로 바뀝니다.',
  t:'왼쪽 위 숫자는 지금 그리는 LOD 단계입니다(0이 가장 정밀). 바뀌는 순간 이전 모델과 새 모델을 짧게 섞으면(크로스페이드) 바뀌는 순간이 숨겨집니다. 반투명 처리가 어려운 엔진에서는 디더 패턴으로 대신 섞기도 합니다.',
  draw(B,a,f,s=0){const k=N/32;for(let y=0;y<N;y++)for(let x=0;x<N;x++)B.set(x,y,y<24*k?mix(hex('#c8d4e4'),hex('#eef0f4'),y/(24*k)):mix(GND,mul(GND,.85),(y-24*k)/(8*k)));
