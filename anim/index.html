@@ -55,7 +55,7 @@ footer{margin-top:56px;color:var(--muted);font-size:13px}
 </header>
 <nav id="nav"></nav>
 <main id="main"></main>
-<footer>모든 코드는 자바스크립트로 구현되어 있습니다.</footer>
+<footer>모든 코드는 자바스크립트로 구현되어 있습니다.<br>방문 수는 쿠키 없이 Cloudflare Web Analytics로 셉니다.</footer>
 </div>
 
 <script>
@@ -430,5 +430,6 @@ if(anims.length&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
   const loop=ts=>{const f=.5-.5*Math.cos(ts/1800*Math.PI*2);anims.forEach(([c0,c1,t])=>{render(c0,t,false,f,ts/1000);render(c1,t,true,f,ts/1000)});requestAnimationFrame(loop)};
   requestAnimationFrame(loop)}
 </script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "eb9c31f861f94b378f5ca0eb41d716d7"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>
